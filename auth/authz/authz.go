@@ -5,10 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	optionlib "github.com/sagikazarmark/go-option"
-
 	"github.com/distribution-auth/auth/auth"
-	"github.com/distribution-auth/auth/pkg/option"
 )
 
 // DefaultAuthorizer implements a basic set of authorization rules
@@ -21,7 +18,7 @@ type DefaultAuthorizer struct {
 
 // RepositoryAuthorizer authorizes access requests to a specific repository.
 type RepositoryAuthorizer interface {
-	Authorize(ctx context.Context, name string, subject option.Option[auth.Subject], requestedActions []string) ([]string, error)
+	Authorize(ctx context.Context, name string, subject auth.Subject, requestedActions []string) ([]string, error)
 }
 
 // NewDefaultAuthorizer returns a new DefaultAuthorizer.
@@ -32,8 +29,8 @@ func NewDefaultAuthorizer(repoAuthorizer RepositoryAuthorizer, allowAnonymous bo
 	}
 }
 
-func (a DefaultAuthorizer) Authorize(ctx context.Context, subject option.Option[auth.Subject], requestedScopes []auth.Scope) ([]auth.Scope, error) {
-	if !a.allowAnonymous && optionlib.IsNone[auth.Subject](subject) {
+func (a DefaultAuthorizer) Authorize(ctx context.Context, subject auth.Subject, requestedScopes []auth.Scope) ([]auth.Scope, error) {
+	if !a.allowAnonymous && subject == nil {
 		return nil, auth.ErrUnauthorized
 	}
 	// Let's be optimistic about the amount of granted scopes
@@ -82,14 +79,12 @@ func NewDefaultRepositoryAuthorizer(allowAnonymous bool) DefaultRepositoryAuthor
 	}
 }
 
-func (a DefaultRepositoryAuthorizer) Authorize(_ context.Context, name string, optionalSubject option.Option[auth.Subject], requestedActions []string) ([]string, error) {
-	if !a.allowAnonymous && optionlib.IsNone[auth.Subject](optionalSubject) {
+func (a DefaultRepositoryAuthorizer) Authorize(_ context.Context, name string, subject auth.Subject, requestedActions []string) ([]string, error) {
+	if !a.allowAnonymous && subject == nil {
 		return nil, auth.ErrUnauthorized
 	}
 
-	subject := optionlib.Unwrap[auth.Subject](optionalSubject)
-
-	if !strings.HasPrefix(name, fmt.Sprintf("%s/", subject.GetName())) {
+	if !strings.HasPrefix(name, fmt.Sprintf("%s/", auth.GetSubjectName(subject))) {
 		return []string{}, nil
 	}
 

@@ -9,6 +9,29 @@ import (
 	"github.com/distribution-auth/auth/auth"
 )
 
+type subject struct {
+	id         string
+	attributes map[string]string
+}
+
+func (s subject) ID() string {
+	return s.id
+}
+
+func (s subject) Attribute(key string) (string, bool) {
+	if s.attributes == nil {
+		return "", false
+	}
+
+	v, ok := s.attributes[key]
+
+	return v, ok
+}
+
+func (s subject) Attributes() map[string]string {
+	return maps.Clone(s.attributes)
+}
+
 // StaticPasswordAuthenticator authenticates a subject from a static list of users.
 type StaticPasswordAuthenticator struct {
 	users map[string]string
@@ -28,15 +51,15 @@ func (a StaticPasswordAuthenticator) Authenticate(_ context.Context, username st
 		// timing attack paranoia
 		bcrypt.CompareHashAndPassword([]byte{}, []byte(password))
 
-		return auth.Subject{}, auth.ErrAuthenticationFailed
+		return nil, auth.ErrAuthenticationFailed
 	}
 
 	err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password))
 	if err != nil {
-		return auth.Subject{}, auth.ErrAuthenticationFailed
+		return nil, auth.ErrAuthenticationFailed
 	}
 
-	return auth.Subject{
-		ID: username,
+	return subject{
+		id: username,
 	}, nil
 }

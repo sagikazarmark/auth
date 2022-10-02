@@ -44,7 +44,7 @@ func NewDefaultRefreshTokenAuthenticator(repository RefreshTokenRepository) Defa
 func (a DefaultRefreshTokenAuthenticator) Authenticate(ctx context.Context, refreshToken string) (auth.Subject, error) {
 	subject, err := a.repository.FindSubject(ctx, refreshToken)
 	if err != nil {
-		return auth.Subject{}, err
+		return nil, err
 	}
 
 	return subject, nil
