@@ -22,6 +22,7 @@ import (
 	"github.com/distribution-auth/auth/auth"
 	"github.com/distribution-auth/auth/auth/authn"
 	"github.com/distribution-auth/auth/auth/authz"
+	"github.com/distribution-auth/auth/auth/refresh"
 	jwtauth "github.com/distribution-auth/auth/auth/token/jwt"
 	"github.com/sagikazarmark/go-option"
 )
@@ -90,7 +91,7 @@ func main() {
 	// TODO: make configurable
 	tokenIssuer.Expiration = 15 * time.Minute
 
-	refreshTokenRepository := &auth.InMemoryRefreshTokenRepository{}
+	refreshTokenRepository := &refresh.InMemoryRefreshTokenRepository{}
 
 	ts := &tokenServer{
 		authenticator: authn.NewStaticPasswordAuthenticator(map[string]string{
@@ -98,8 +99,8 @@ func main() {
 		}),
 		authorizer:                authz.NewDefaultAuthorizer(authz.NewDefaultRepositoryAuthorizer(false), false),
 		tokenIssuer:               tokenIssuer,
-		refreshTokenAuthenticator: auth.NewDefaultRefreshTokenAuthenticator(refreshTokenRepository),
-		refreshTokenIssuer:        auth.NewDefaultRefreshTokenIssuer(refreshTokenRepository),
+		refreshTokenAuthenticator: refresh.NewDefaultRefreshTokenAuthenticator(refreshTokenRepository),
+		refreshTokenIssuer:        refresh.NewDefaultRefreshTokenIssuer(refreshTokenRepository),
 	}
 
 	router := mux.NewRouter()
