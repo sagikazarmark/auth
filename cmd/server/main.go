@@ -20,7 +20,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/distribution-auth/auth/auth"
-	jwtauth "github.com/distribution-auth/auth/auth/token/jwt"
+	jwtauth "github.com/distribution-auth/auth/auth/accesstoken/jwt"
+	"github.com/distribution-auth/auth/auth/authn"
+	"github.com/distribution-auth/auth/auth/authz"
+	"github.com/distribution-auth/auth/auth/refreshtoken"
 	"github.com/sagikazarmark/go-option"
 )
 
@@ -88,16 +91,16 @@ func main() {
 	// TODO: make configurable
 	tokenIssuer.Expiration = 15 * time.Minute
 
-	refreshTokenRepository := &auth.InMemoryRefreshTokenRepository{}
+	refreshTokenRepository := &refreshtoken.InMemoryRefreshTokenRepository{}
 
 	ts := &tokenServer{
-		authenticator: auth.NewStaticPasswordAuthenticator(map[string]string{
+		authenticator: authn.NewStaticPasswordAuthenticator(map[string]string{
 			"user": string(passwordHash),
 		}),
-		authorizer:                auth.NewDefaultAuthorizer(auth.NewDefaultRepositoryAuthorizer(false), false),
+		authorizer:                authz.NewDefaultAuthorizer(authz.NewDefaultRepositoryAuthorizer(false), false),
 		tokenIssuer:               tokenIssuer,
-		refreshTokenAuthenticator: auth.NewDefaultRefreshTokenAuthenticator(refreshTokenRepository),
-		refreshTokenIssuer:        auth.NewDefaultRefreshTokenIssuer(refreshTokenRepository),
+		refreshTokenAuthenticator: refreshtoken.NewDefaultRefreshTokenAuthenticator(refreshTokenRepository),
+		refreshTokenIssuer:        refreshtoken.NewDefaultRefreshTokenIssuer(refreshTokenRepository),
 	}
 
 	router := mux.NewRouter()
@@ -146,7 +149,7 @@ func handleError(ctx context.Context, err error, w http.ResponseWriter) {
 type tokenServer struct {
 	authenticator             auth.PasswordAuthenticator
 	authorizer                auth.Authorizer
-	tokenIssuer               auth.TokenIssuer
+	tokenIssuer               auth.AccessTokenIssuer
 	refreshTokenAuthenticator auth.RefreshTokenAuthenticator
 	refreshTokenIssuer        auth.RefreshTokenIssuer
 }
@@ -204,7 +207,7 @@ func (ts *tokenServer) getToken(ctx context.Context, w http.ResponseWriter, r *h
 		return
 	}
 
-	token, err := ts.tokenIssuer.IssueToken(subject, []string{service}, grantedScopes)
+	token, err := ts.tokenIssuer.IssueAccessToken(subject, []string{service}, grantedScopes)
 	if err != nil {
 		handleError(ctx, err, w)
 		return
@@ -331,7 +334,7 @@ func (ts *tokenServer) postToken(ctx context.Context, w http.ResponseWriter, r *
 		return
 	}
 
-	token, err := ts.tokenIssuer.IssueToken(subject, []string{service}, grantedScopes)
+	token, err := ts.tokenIssuer.IssueAccessToken(subject, []string{service}, grantedScopes)
 	if err != nil {
 		handleError(ctx, err, w)
 		return

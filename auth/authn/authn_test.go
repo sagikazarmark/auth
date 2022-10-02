@@ -1,4 +1,4 @@
-package auth
+package authn
 
 import (
 	"context"
@@ -7,6 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/distribution-auth/auth/auth"
 )
 
 func TestStaticPasswordAuthenticator(t *testing.T) {
@@ -15,7 +17,7 @@ func TestStaticPasswordAuthenticator(t *testing.T) {
 			username = "user"
 			password = "password"
 		)
-		expectedSubject := Subject{
+		expectedSubject := auth.Subject{
 			ID: "user",
 		}
 
@@ -38,6 +40,6 @@ func TestStaticPasswordAuthenticator(t *testing.T) {
 		_, err := authenticator.Authenticate(context.Background(), "username", "password")
 		require.Error(t, err)
 
-		assert.Equal(t, ErrAuthenticationFailed, err)
+		assert.Equal(t, auth.ErrAuthenticationFailed, err)
 	})
 }

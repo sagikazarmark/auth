@@ -1,23 +1,13 @@
-package auth
+package refreshtoken
 
 import (
 	"context"
 	"crypto/rand"
 	"math/big"
 	"sync"
+
+	"github.com/distribution-auth/auth/auth"
 )
-
-// RefreshTokenIssuer issues a token that a client can use to issue a new token for a subject without presenting credentials again.
-// TODO: add service as a parameter.
-type RefreshTokenIssuer interface {
-	IssueRefreshToken(ctx context.Context, subject Subject) (string, error)
-}
-
-// RefreshTokenAuthenticator authenticates a refresh token.
-// TODO: add service as a parameter.
-type RefreshTokenAuthenticator interface {
-	Authenticate(ctx context.Context, refreshToken string) (Subject, error)
-}
 
 // DefaultRefreshTokenIssuer is a naive random string generator.
 type DefaultRefreshTokenIssuer struct {
@@ -30,7 +20,7 @@ func NewDefaultRefreshTokenIssuer(repository RefreshTokenRepository) DefaultRefr
 	}
 }
 
-func (i DefaultRefreshTokenIssuer) IssueRefreshToken(ctx context.Context, subject Subject) (string, error) {
+func (i DefaultRefreshTokenIssuer) IssueRefreshToken(ctx context.Context, subject auth.Subject) (string, error) {
 	token := newRefreshToken()
 
 	err := i.repository.SaveSubject(ctx, token, subject)
@@ -51,10 +41,10 @@ func NewDefaultRefreshTokenAuthenticator(repository RefreshTokenRepository) Defa
 	}
 }
 
-func (a DefaultRefreshTokenAuthenticator) Authenticate(ctx context.Context, refreshToken string) (Subject, error) {
+func (a DefaultRefreshTokenAuthenticator) Authenticate(ctx context.Context, refreshToken string) (auth.Subject, error) {
 	subject, err := a.repository.FindSubject(ctx, refreshToken)
 	if err != nil {
-		return Subject{}, err
+		return auth.Subject{}, err
 	}
 
 	return subject, nil
@@ -79,12 +69,12 @@ func newRefreshToken() string {
 }
 
 type RefreshTokenRepository interface {
-	FindSubject(ctx context.Context, refreshTokenID string) (Subject, error)
-	SaveSubject(ctx context.Context, refreshTokenID string, subject Subject) error
+	FindSubject(ctx context.Context, refreshTokenID string) (auth.Subject, error)
+	SaveSubject(ctx context.Context, refreshTokenID string, subject auth.Subject) error
 }
 
 type InMemoryRefreshTokenRepository struct {
-	entries map[string]Subject
+	entries map[string]auth.Subject
 
 	initOnce sync.Once
 	mu       sync.RWMutex
@@ -93,12 +83,12 @@ type InMemoryRefreshTokenRepository struct {
 func (r *InMemoryRefreshTokenRepository) init() {
 	r.initOnce.Do(func() {
 		if r.entries == nil {
-			r.entries = make(map[string]Subject)
+			r.entries = make(map[string]auth.Subject)
 		}
 	})
 }
 
-func (r *InMemoryRefreshTokenRepository) FindSubject(_ context.Context, refreshTokenID string) (Subject, error) {
+func (r *InMemoryRefreshTokenRepository) FindSubject(_ context.Context, refreshTokenID string) (auth.Subject, error) {
 	r.init()
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -106,7 +96,7 @@ func (r *InMemoryRefreshTokenRepository) FindSubject(_ context.Context, refreshT
 	return r.entries[refreshTokenID], nil
 }
 
-func (r *InMemoryRefreshTokenRepository) SaveSubject(_ context.Context, refreshTokenID string, subject Subject) error {
+func (r *InMemoryRefreshTokenRepository) SaveSubject(_ context.Context, refreshTokenID string, subject auth.Subject) error {
 	r.init()
 	r.mu.Lock()
 	defer r.mu.Unlock()

@@ -7,7 +7,6 @@ require (
 	github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7
 	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/gorilla/mux v1.8.0
-	github.com/gorilla/schema v1.2.0
 	github.com/sagikazarmark/go-option v0.2.0
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.0
