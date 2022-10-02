@@ -1,4 +1,4 @@
-package auth
+package authz
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/distribution-auth/auth/auth"
 	"github.com/distribution-auth/auth/pkg/option"
 )
 
@@ -15,7 +16,7 @@ type repositoryAuthorizerStub struct {
 	repositories map[string]bool
 }
 
-func (a repositoryAuthorizerStub) Authorize(_ context.Context, name string, subject option.Option[Subject], actions []string) ([]string, error) {
+func (a repositoryAuthorizerStub) Authorize(_ context.Context, name string, subject option.Option[auth.Subject], actions []string) ([]string, error) {
 	if !a.repositories[name] {
 		return []string{}, nil
 	}
@@ -24,29 +25,29 @@ func (a repositoryAuthorizerStub) Authorize(_ context.Context, name string, subj
 }
 
 func TestDefaultAuthorizer(t *testing.T) {
-	subject := optionlib.Some(Subject{
+	subject := optionlib.Some(auth.Subject{
 		ID: "user",
 	})
 
 	testCases := []struct {
-		subject        option.Option[Subject]
-		scopes         []Scope
-		expectedScopes []Scope
+		subject        option.Option[auth.Subject]
+		scopes         []auth.Scope
+		expectedScopes []auth.Scope
 	}{
 		{
 			subject: subject,
-			scopes: []Scope{
+			scopes: []auth.Scope{
 				{
-					Resource: Resource{
+					Resource: auth.Resource{
 						Type: "registry",
 						Name: "catalog",
 					},
 					Actions: []string{"search"},
 				},
 			},
-			expectedScopes: []Scope{
+			expectedScopes: []auth.Scope{
 				{
-					Resource: Resource{
+					Resource: auth.Resource{
 						Type: "registry",
 						Name: "catalog",
 					},
@@ -56,18 +57,18 @@ func TestDefaultAuthorizer(t *testing.T) {
 		},
 		{
 			subject: subject,
-			scopes: []Scope{
+			scopes: []auth.Scope{
 				{
-					Resource: Resource{
+					Resource: auth.Resource{
 						Type: "repository",
 						Name: "user/repository",
 					},
 					Actions: []string{"push", "pull"},
 				},
 			},
-			expectedScopes: []Scope{
+			expectedScopes: []auth.Scope{
 				{
-					Resource: Resource{
+					Resource: auth.Resource{
 						Type: "repository",
 						Name: "user/repository",
 					},

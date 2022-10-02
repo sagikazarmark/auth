@@ -21,6 +21,7 @@ import (
 
 	"github.com/distribution-auth/auth/auth"
 	"github.com/distribution-auth/auth/auth/authn"
+	"github.com/distribution-auth/auth/auth/authz"
 	jwtauth "github.com/distribution-auth/auth/auth/token/jwt"
 	"github.com/sagikazarmark/go-option"
 )
@@ -95,7 +96,7 @@ func main() {
 		authenticator: authn.NewStaticPasswordAuthenticator(map[string]string{
 			"user": string(passwordHash),
 		}),
-		authorizer:                auth.NewDefaultAuthorizer(auth.NewDefaultRepositoryAuthorizer(false), false),
+		authorizer:                authz.NewDefaultAuthorizer(authz.NewDefaultRepositoryAuthorizer(false), false),
 		tokenIssuer:               tokenIssuer,
 		refreshTokenAuthenticator: auth.NewDefaultRefreshTokenAuthenticator(refreshTokenRepository),
 		refreshTokenIssuer:        auth.NewDefaultRefreshTokenIssuer(refreshTokenRepository),
