@@ -4,19 +4,41 @@ import (
 	"context"
 	"testing"
 
-	optionlib "github.com/sagikazarmark/go-option"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/maps"
 
 	"github.com/distribution-auth/auth/auth"
-	"github.com/distribution-auth/auth/pkg/option"
 )
+
+type subject struct {
+	id         string
+	attributes map[string]string
+}
+
+func (s subject) ID() string {
+	return s.id
+}
+
+func (s subject) Attribute(key string) (string, bool) {
+	if s.attributes == nil {
+		return "", false
+	}
+
+	v, ok := s.attributes[key]
+
+	return v, ok
+}
+
+func (s subject) Attributes() map[string]string {
+	return maps.Clone(s.attributes)
+}
 
 type repositoryAuthorizerStub struct {
 	repositories map[string]bool
 }
 
-func (a repositoryAuthorizerStub) Authorize(_ context.Context, name string, subject option.Option[auth.Subject], actions []string) ([]string, error) {
+func (a repositoryAuthorizerStub) Authorize(_ context.Context, name string, subject auth.Subject, actions []string) ([]string, error) {
 	if !a.repositories[name] {
 		return []string{}, nil
 	}
@@ -25,12 +47,12 @@ func (a repositoryAuthorizerStub) Authorize(_ context.Context, name string, subj
 }
 
 func TestDefaultAuthorizer(t *testing.T) {
-	subject := optionlib.Some(auth.Subject{
-		ID: "user",
-	})
+	subject := subject{
+		id: "user",
+	}
 
 	testCases := []struct {
-		subject        option.Option[auth.Subject]
+		subject        auth.Subject
 		scopes         []auth.Scope
 		expectedScopes []auth.Scope
 	}{

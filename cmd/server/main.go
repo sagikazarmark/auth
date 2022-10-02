@@ -24,7 +24,6 @@ import (
 	"github.com/distribution-auth/auth/auth/authn"
 	"github.com/distribution-auth/auth/auth/authz"
 	"github.com/distribution-auth/auth/auth/refreshtoken"
-	"github.com/sagikazarmark/go-option"
 )
 
 func init() {
@@ -184,7 +183,7 @@ func (ts *tokenServer) getToken(ctx context.Context, w http.ResponseWriter, r *h
 		return
 	}
 
-	authenticatedSubject, err := ts.authenticator.Authenticate(ctx, username, password)
+	subject, err := ts.authenticator.Authenticate(ctx, username, password)
 	if err != nil && errors.Is(err, auth.ErrAuthenticationFailed) {
 		handleError(ctx, errcode.ErrorCodeUnauthorized.WithDetail(err), w)
 		return
@@ -192,8 +191,6 @@ func (ts *tokenServer) getToken(ctx context.Context, w http.ResponseWriter, r *h
 		handleError(ctx, err, w)
 		return
 	}
-
-	subject := option.Some(authenticatedSubject)
 
 	requestedScopes, err := auth.ParseScopes(rawRequestedScopes)
 	if err != nil {
@@ -220,8 +217,8 @@ func (ts *tokenServer) getToken(ctx context.Context, w http.ResponseWriter, r *h
 		ExpiresIn: int(token.ExpiresIn.Seconds()),
 	}
 
-	if offline && option.IsSome(subject) {
-		refreshToken, err := ts.refreshTokenIssuer.IssueRefreshToken(ctx, option.Unwrap(subject))
+	if offline && subject != nil {
+		refreshToken, err := ts.refreshTokenIssuer.IssueRefreshToken(ctx, subject)
 		if err != nil {
 			handleError(ctx, err, w)
 			return
@@ -283,7 +280,7 @@ func (ts *tokenServer) postToken(ctx context.Context, w http.ResponseWriter, r *
 		return
 	}
 
-	var subject option.Option[auth.Subject]
+	var subject auth.Subject
 	var rToken string
 	switch grantType {
 	case "refresh_token":
@@ -302,7 +299,7 @@ func (ts *tokenServer) postToken(ctx context.Context, w http.ResponseWriter, r *
 		// 	return
 		// }
 
-		subject = option.Some(authenticatedSubject)
+		subject = authenticatedSubject
 	case "password":
 		username := r.PostFormValue("username")
 		if username == "" {
@@ -322,7 +319,7 @@ func (ts *tokenServer) postToken(ctx context.Context, w http.ResponseWriter, r *
 			handleError(ctx, err, w)
 			return
 		}
-		subject = option.Some(authenticatedSubject)
+		subject = authenticatedSubject
 	default:
 		handleError(ctx, ErrorUnsupportedValue.WithDetail("unknown grant_type value"), w)
 		return
@@ -349,8 +346,8 @@ func (ts *tokenServer) postToken(ctx context.Context, w http.ResponseWriter, r *
 		Scope:     auth.Scopes(grantedScopes).String(),
 	}
 
-	if offline && option.IsSome(subject) {
-		refreshToken, err := ts.refreshTokenIssuer.IssueRefreshToken(ctx, option.Unwrap(subject))
+	if offline && subject != nil {
+		refreshToken, err := ts.refreshTokenIssuer.IssueRefreshToken(ctx, subject)
 		if err != nil {
 			handleError(ctx, err, w)
 			return

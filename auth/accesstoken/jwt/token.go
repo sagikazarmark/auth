@@ -10,10 +10,8 @@ import (
 
 	"github.com/docker/libtrust"
 	"github.com/golang-jwt/jwt/v4"
-	optionlib "github.com/sagikazarmark/go-option"
 
 	"github.com/distribution-auth/auth/auth"
-	"github.com/distribution-auth/auth/pkg/option"
 )
 
 type claims struct {
@@ -32,7 +30,7 @@ type Issuer struct {
 	Expiration time.Duration
 }
 
-func (i Issuer) IssueAccessToken(subject option.Option[auth.Subject], audience []string, grantedScopes []auth.Scope) (auth.AccessToken, error) {
+func (i Issuer) IssueAccessToken(subject auth.Subject, audience []string, grantedScopes []auth.Scope) (auth.AccessToken, error) {
 	randomBytes := make([]byte, 15)
 	_, err := io.ReadFull(rand.Reader, randomBytes)
 	if err != nil {
@@ -60,7 +58,7 @@ func (i Issuer) IssueAccessToken(subject option.Option[auth.Subject], audience [
 	claims := claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    i.Issuer,
-			Subject:   optionlib.MapOr[auth.Subject](subject, "", func(s auth.Subject) string { return s.ID }),
+			Subject:   subject.ID(),
 			Audience:  audience,
 			ExpiresAt: jwt.NewNumericDate(now.Add(exp)),
 			NotBefore: jwt.NewNumericDate(now),

@@ -17,8 +17,8 @@ func TestStaticPasswordAuthenticator(t *testing.T) {
 			username = "user"
 			password = "password"
 		)
-		expectedSubject := auth.Subject{
-			ID: "user",
+		expectedSubject := subject{
+			id: "user",
 		}
 
 		passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
