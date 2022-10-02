@@ -20,6 +20,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/distribution-auth/auth/auth"
+	"github.com/distribution-auth/auth/auth/authn"
 	jwtauth "github.com/distribution-auth/auth/auth/token/jwt"
 	"github.com/sagikazarmark/go-option"
 )
@@ -91,7 +92,7 @@ func main() {
 	refreshTokenRepository := &auth.InMemoryRefreshTokenRepository{}
 
 	ts := &tokenServer{
-		authenticator: auth.NewStaticPasswordAuthenticator(map[string]string{
+		authenticator: authn.NewStaticPasswordAuthenticator(map[string]string{
 			"user": string(passwordHash),
 		}),
 		authorizer:                auth.NewDefaultAuthorizer(auth.NewDefaultRepositoryAuthorizer(false), false),

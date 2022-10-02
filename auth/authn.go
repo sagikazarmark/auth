@@ -3,9 +3,6 @@ package auth
 import (
 	"context"
 	"errors"
-
-	"golang.org/x/crypto/bcrypt"
-	"golang.org/x/exp/maps"
 )
 
 // Attribute keys
@@ -59,36 +56,4 @@ var ErrAuthenticationFailed = errors.New("authentication failed")
 // It returns an ErrAuthenticationFailed error in case credentials are invalid.
 type PasswordAuthenticator interface {
 	Authenticate(ctx context.Context, username string, password string) (Subject, error)
-}
-
-// StaticPasswordAuthenticator authenticates a subject from a static list of users.
-type StaticPasswordAuthenticator struct {
-	users map[string]string
-}
-
-// NewStaticPasswordAuthenticator returns a new StaticPasswordAuthenticator.
-func NewStaticPasswordAuthenticator(users map[string]string) StaticPasswordAuthenticator {
-	return StaticPasswordAuthenticator{
-		users: maps.Clone(users),
-	}
-}
-
-// Authenticate implements the PasswordAuthenticator interface.
-func (a StaticPasswordAuthenticator) Authenticate(_ context.Context, username string, password string) (Subject, error) {
-	passwordHash, ok := a.users[username]
-	if !ok {
-		// timing attack paranoia
-		bcrypt.CompareHashAndPassword([]byte{}, []byte(password))
-
-		return Subject{}, ErrAuthenticationFailed
-	}
-
-	err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password))
-	if err != nil {
-		return Subject{}, ErrAuthenticationFailed
-	}
-
-	return Subject{
-		ID: username,
-	}, nil
 }
