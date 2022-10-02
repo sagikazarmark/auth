@@ -20,10 +20,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/distribution-auth/auth/auth"
+	jwtauth "github.com/distribution-auth/auth/auth/accesstoken/jwt"
 	"github.com/distribution-auth/auth/auth/authn"
 	"github.com/distribution-auth/auth/auth/authz"
 	"github.com/distribution-auth/auth/auth/refreshtoken"
-	jwtauth "github.com/distribution-auth/auth/auth/token/jwt"
 	"github.com/sagikazarmark/go-option"
 )
 
@@ -149,7 +149,7 @@ func handleError(ctx context.Context, err error, w http.ResponseWriter) {
 type tokenServer struct {
 	authenticator             auth.PasswordAuthenticator
 	authorizer                auth.Authorizer
-	tokenIssuer               auth.TokenIssuer
+	tokenIssuer               auth.AccessTokenIssuer
 	refreshTokenAuthenticator auth.RefreshTokenAuthenticator
 	refreshTokenIssuer        auth.RefreshTokenIssuer
 }
@@ -207,7 +207,7 @@ func (ts *tokenServer) getToken(ctx context.Context, w http.ResponseWriter, r *h
 		return
 	}
 
-	token, err := ts.tokenIssuer.IssueToken(subject, []string{service}, grantedScopes)
+	token, err := ts.tokenIssuer.IssueAccessToken(subject, []string{service}, grantedScopes)
 	if err != nil {
 		handleError(ctx, err, w)
 		return
@@ -334,7 +334,7 @@ func (ts *tokenServer) postToken(ctx context.Context, w http.ResponseWriter, r *
 		return
 	}
 
-	token, err := ts.tokenIssuer.IssueToken(subject, []string{service}, grantedScopes)
+	token, err := ts.tokenIssuer.IssueAccessToken(subject, []string{service}, grantedScopes)
 	if err != nil {
 		handleError(ctx, err, w)
 		return

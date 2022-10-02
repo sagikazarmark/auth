@@ -32,11 +32,11 @@ type Issuer struct {
 	Expiration time.Duration
 }
 
-func (i Issuer) IssueToken(subject option.Option[auth.Subject], audience []string, grantedScopes []auth.Scope) (auth.Token, error) {
+func (i Issuer) IssueAccessToken(subject option.Option[auth.Subject], audience []string, grantedScopes []auth.Scope) (auth.AccessToken, error) {
 	randomBytes := make([]byte, 15)
 	_, err := io.ReadFull(rand.Reader, randomBytes)
 	if err != nil {
-		return auth.Token{}, err
+		return auth.AccessToken{}, err
 	}
 	randomID := base64.URLEncoding.EncodeToString(randomBytes)
 
@@ -78,17 +78,17 @@ func (i Issuer) IssueToken(subject option.Option[auth.Subject], audience []strin
 		var jwkMessage json.RawMessage
 		jwkMessage, err = i.SigningKey.PublicKey().MarshalJSON()
 		if err != nil {
-			return auth.Token{}, err
+			return auth.AccessToken{}, err
 		}
 		token.Header["jwk"] = &jwkMessage
 	}
 
 	signedToken, err := token.SignedString(i.SigningKey.CryptoPrivateKey())
 	if err != nil {
-		return auth.Token{}, err
+		return auth.AccessToken{}, err
 	}
 
-	return auth.Token{
+	return auth.AccessToken{
 		Payload:   signedToken,
 		ExpiresIn: i.Expiration,
 		IssuedAt:  now,
