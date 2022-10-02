@@ -12,6 +12,10 @@ import (
 // meta-data about structs, and an instance can be shared safely.
 var decoder = schema.NewDecoder()
 
+func init() {
+	decoder.IgnoreUnknownKeys(true)
+}
+
 // TokenServer implements the [Docker Registry v2 authentication] specification.
 //
 // [Docker Registry v2 authentication]: https://github.com/distribution/distribution/blob/main/docs/spec/auth/index.md
