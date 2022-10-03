@@ -90,7 +90,7 @@ func main() {
 
 	refreshTokenRepository := &refreshtoken.InMemoryRefreshTokenRepository{}
 
-	server := auth.TokenServer{
+	service := auth.TokenServiceImpl{
 		Authenticator: authn.NewStaticPasswordAuthenticator(map[string]string{
 			"user": string(passwordHash),
 		}),
@@ -99,6 +99,10 @@ func main() {
 		RefreshTokenAuthenticator: refreshtoken.NewDefaultRefreshTokenAuthenticator(refreshTokenRepository),
 		RefreshTokenIssuer:        refreshtoken.NewDefaultRefreshTokenIssuer(refreshTokenRepository),
 		Logger:                    logger,
+	}
+
+	server := auth.TokenServer{
+		Service: service,
 	}
 
 	router := mux.NewRouter()
