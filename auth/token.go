@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"time"
 )
 
@@ -19,4 +20,10 @@ type AccessToken struct {
 // [Token Authentication Specification]: https://github.com/distribution/distribution/blob/main/docs/spec/auth/token.md
 type AccessTokenIssuer interface {
 	IssueAccessToken(subject Subject, audience []string, grantedScopes []Scope) (AccessToken, error)
+}
+
+// RefreshTokenIssuer issues a token that a client can use to issue a new token for a subject without presenting credentials again.
+// TODO: add service as a parameter.
+type RefreshTokenIssuer interface {
+	IssueRefreshToken(ctx context.Context, subject Subject) (string, error)
 }

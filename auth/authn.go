@@ -17,3 +17,9 @@ var ErrAuthenticationFailed = errors.New("authentication failed")
 type PasswordAuthenticator interface {
 	Authenticate(ctx context.Context, username string, password string) (Subject, error)
 }
+
+// RefreshTokenAuthenticator authenticates a refresh token.
+// TODO: add service as a parameter.
+type RefreshTokenAuthenticator interface {
+	Authenticate(ctx context.Context, refreshToken string) (Subject, error)
+}
