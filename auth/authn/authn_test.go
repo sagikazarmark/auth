@@ -87,7 +87,7 @@ func TestUser(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, username, user.ID())
+	assert.Equal(t, auth.SubjectID(username), user.ID())
 
 	val, ok := user.Attribute(attrKey)
 	assert.Equal(t, attrValue, val)
@@ -122,7 +122,7 @@ func TestRefreshTokenAuthenticator(t *testing.T) {
 
 	authenticator := NewRefreshTokenAuthenticator(verifier, subjectRepository)
 
-	subject, err := authenticator.AuthenticateRefreshToken(context.Background(), refreshToken, "service")
+	subject, err := authenticator.AuthenticateRefreshToken(context.Background(), "service", refreshToken)
 	require.NoError(t, err)
 
 	assert.Equal(t, user, subject)

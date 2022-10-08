@@ -12,11 +12,11 @@ import (
 )
 
 type subject struct {
-	id         string
+	id         auth.SubjectID
 	attributes map[string]string
 }
 
-func (s subject) ID() string {
+func (s subject) ID() auth.SubjectID {
 	return s.id
 }
 
