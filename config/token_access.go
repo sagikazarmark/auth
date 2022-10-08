@@ -25,6 +25,8 @@ func (c *AccessTokenIssuer) UnmarshalYAML(value *yaml.Node) error {
 		return err
 	}
 
+	c.Type = rawConfig.Type
+
 	var config AccessTokenIssuerFactory
 
 	switch rawConfig.Type {
@@ -50,6 +52,7 @@ func (c *AccessTokenIssuer) UnmarshalYAML(value *yaml.Node) error {
 // AccessTokenIssuerFactory creates a new auth.AccessTokenIssuer.
 type AccessTokenIssuerFactory interface {
 	CreateAccessTokenIssuer() (auth.AccessTokenIssuer, error)
+	Validate() error
 }
 
 type jwtAccessTokenIssuer struct {
@@ -65,4 +68,20 @@ func (c jwtAccessTokenIssuer) CreateAccessTokenIssuer() (auth.AccessTokenIssuer,
 	}
 
 	return jwt.NewAccessTokenIssuer(c.Issuer, signingKey, c.Expiration), nil
+}
+
+func (c jwtAccessTokenIssuer) Validate() error {
+	if c.Issuer == "" {
+		return fmt.Errorf("access token issuer: jwt: issuer is required")
+	}
+
+	if c.PrivateKeyFile == "" {
+		return fmt.Errorf("access token issuer: jwt: privateKeyFile is required")
+	}
+
+	if c.Expiration == 0 {
+		return fmt.Errorf("access token issuer: jwt: expiration is required")
+	}
+
+	return nil
 }

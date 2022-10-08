@@ -25,6 +25,8 @@ func (c *Authenticator) UnmarshalYAML(value *yaml.Node) error {
 		return err
 	}
 
+	c.Type = rawConfig.Type
+
 	var config AuthenticatorFactory
 
 	switch rawConfig.Type {
@@ -49,6 +51,7 @@ func (c *Authenticator) UnmarshalYAML(value *yaml.Node) error {
 // AuthenticatorFactory creates a new auth.PasswordAuthenticator.
 type AuthenticatorFactory interface {
 	CreateAuthenticator() (auth.PasswordAuthenticator, error)
+	Validate() error
 }
 
 type userAuthenticator struct {
@@ -73,4 +76,18 @@ func (c userAuthenticator) CreateAuthenticator() (auth.PasswordAuthenticator, er
 	})
 
 	return authn.NewUserAuthenticator(entries), nil
+}
+
+func (c userAuthenticator) Validate() error {
+	for i, entry := range c.Entries {
+		if entry.Username == "" {
+			return fmt.Errorf("authenticator: user authenticator: entry[%d]: username is required", i)
+		}
+
+		if entry.PasswordHash == "" {
+			return fmt.Errorf("authenticator: user authenticator: entry[%d]: password hash is required", i)
+		}
+	}
+
+	return nil
 }

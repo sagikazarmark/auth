@@ -24,6 +24,8 @@ func (c *RefreshTokenIssuer) UnmarshalYAML(value *yaml.Node) error {
 		return err
 	}
 
+	c.Type = rawConfig.Type
+
 	var config RefreshTokenIssuerFactory
 
 	switch rawConfig.Type {
@@ -49,6 +51,7 @@ func (c *RefreshTokenIssuer) UnmarshalYAML(value *yaml.Node) error {
 // RefreshTokenIssuerFactory creates a new auth.RefreshTokenIssuer.
 type RefreshTokenIssuerFactory interface {
 	CreateRefreshTokenIssuer() (auth.RefreshTokenIssuer, error)
+	Validate() error
 }
 
 type jwtRefreshTokenIssuer struct {
@@ -63,4 +66,16 @@ func (c jwtRefreshTokenIssuer) CreateRefreshTokenIssuer() (auth.RefreshTokenIssu
 	}
 
 	return jwt.NewRefreshTokenIssuer(c.Issuer, signingKey), nil
+}
+
+func (c jwtRefreshTokenIssuer) Validate() error {
+	if c.Issuer == "" {
+		return fmt.Errorf("refresh token issuer: jwt: issuer is required")
+	}
+
+	if c.PrivateKeyFile == "" {
+		return fmt.Errorf("refresh token issuer: jwt: privateKeyFile is required")
+	}
+
+	return nil
 }

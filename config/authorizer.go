@@ -23,6 +23,8 @@ func (c *Authorizer) UnmarshalYAML(value *yaml.Node) error {
 		return err
 	}
 
+	c.Type = rawConfig.Type
+
 	var config AuthorizerFactory
 
 	switch rawConfig.Type {
@@ -48,6 +50,7 @@ func (c *Authorizer) UnmarshalYAML(value *yaml.Node) error {
 // AuthorizerFactory creates a new auth.Authorizer.
 type AuthorizerFactory interface {
 	CreateAuthorizer() (auth.Authorizer, error)
+	Validate() error
 }
 
 type defaultAuthorizer struct {
@@ -56,4 +59,8 @@ type defaultAuthorizer struct {
 
 func (c defaultAuthorizer) CreateAuthorizer() (auth.Authorizer, error) {
 	return authz.NewDefaultAuthorizer(authz.NewDefaultRepositoryAuthorizer(c.AllowAnonymous), c.AllowAnonymous), nil
+}
+
+func (c defaultAuthorizer) Validate() error {
+	return nil
 }
