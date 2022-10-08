@@ -4,7 +4,7 @@
 [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/mod/github.com/distribution-auth/auth)
 [![built with nix](https://img.shields.io/badge/builtwith-nix-7d81f7?style=flat-square)](https://builtwithnix.org)
 
-**Authentication library implementing the [Distribtion Auth Specification](https://github.com/distribution/distribution/tree/main/docs/spec/auth).**
+**Authentication library implementing the [Distribution Registry Auth specification](https://github.com/distribution/distribution/tree/main/docs/spec/auth).**
 
 
 ## Usage
