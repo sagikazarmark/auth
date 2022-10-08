@@ -9,57 +9,120 @@ import (
 	"github.com/distribution-auth/auth/auth"
 )
 
-type subject struct {
-	id         string
-	attributes map[string]string
+// UserAuthenticator is a static list of users.
+type UserAuthenticator struct {
+	entries map[string]User
 }
 
-func (s subject) ID() string {
-	return s.id
+// NewUserAuthenticator returns a new UserAuthenticator.
+func NewUserAuthenticator(users []User) UserAuthenticator {
+	entries := make(map[string]User, len(users))
+
+	for _, user := range users {
+		entries[user.Username] = user
+	}
+
+	return UserAuthenticator{
+		entries: entries,
+	}
 }
 
-func (s subject) Attribute(key string) (string, bool) {
-	if s.attributes == nil {
+// User is an auth.Subject.
+type User struct {
+	Enabled      bool
+	Username     string
+	PasswordHash string
+	Attrs        map[string]string
+}
+
+// ID implements auth.Subject.
+func (u User) ID() auth.SubjectID {
+	return auth.SubjectID(u.Username)
+}
+
+// Attribute implements auth.Subject.
+func (u User) Attribute(key string) (string, bool) {
+	if u.Attrs == nil {
 		return "", false
 	}
 
-	v, ok := s.attributes[key]
+	v, ok := u.Attrs[key]
 
 	return v, ok
 }
 
-func (s subject) Attributes() map[string]string {
-	return maps.Clone(s.attributes)
+// Attributes implements auth.Subject.
+func (u User) Attributes() map[string]string {
+	return maps.Clone(u.Attrs)
 }
 
-// StaticPasswordAuthenticator authenticates a subject from a static list of users.
-type StaticPasswordAuthenticator struct {
-	users map[string]string
-}
-
-// NewStaticPasswordAuthenticator returns a new StaticPasswordAuthenticator.
-func NewStaticPasswordAuthenticator(users map[string]string) StaticPasswordAuthenticator {
-	return StaticPasswordAuthenticator{
-		users: maps.Clone(users),
+// AuthenticatePassword implements auth.PasswordAuthenticator.
+func (a UserAuthenticator) AuthenticatePassword(_ context.Context, username string, password string) (auth.Subject, error) {
+	if a.entries == nil {
+		return nil, auth.ErrAuthenticationFailed
 	}
-}
 
-// Authenticate implements the PasswordAuthenticator interface.
-func (a StaticPasswordAuthenticator) Authenticate(_ context.Context, username string, password string) (auth.Subject, error) {
-	passwordHash, ok := a.users[username]
-	if !ok {
+	user, ok := a.entries[username]
+	if !ok || !user.Enabled {
 		// timing attack paranoia
 		bcrypt.CompareHashAndPassword([]byte{}, []byte(password))
 
 		return nil, auth.ErrAuthenticationFailed
 	}
 
-	err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password))
+	err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 	if err != nil {
 		return nil, auth.ErrAuthenticationFailed
 	}
 
-	return subject{
-		id: username,
-	}, nil
+	return user, nil
+}
+
+// GetSubjectByID implements SubjectRepository.
+func (a UserAuthenticator) GetSubjectByID(ctx context.Context, id auth.SubjectID) (auth.Subject, error) {
+	user, ok := a.entries[string(id)]
+	if !ok || !user.Enabled {
+		return nil, auth.ErrAuthenticationFailed
+	}
+
+	return user, nil
+}
+
+// RefreshTokenAuthenticator authenticates a refresh token and returns the auth.Subject it belongs to.
+type RefreshTokenAuthenticator struct {
+	verifier          RefreshTokenVerifier
+	subjectRepository SubjectRepository
+}
+
+// NewRefreshTokenAuthenticator returns a new RefreshTokenAuthenticator.
+func NewRefreshTokenAuthenticator(verifier RefreshTokenVerifier, subjectRepository SubjectRepository) RefreshTokenAuthenticator {
+	return RefreshTokenAuthenticator{
+		verifier:          verifier,
+		subjectRepository: subjectRepository,
+	}
+}
+
+// RefreshTokenVerifier verifies a refresh token and returns the Subject ID it belongs to.
+type RefreshTokenVerifier interface {
+	VerifyRefreshToken(ctx context.Context, service string, refreshToken string) (auth.SubjectID, error)
+}
+
+// SubjectRepository looks up an auth.Subject based on an identifier.
+type SubjectRepository interface {
+	GetSubjectByID(ctx context.Context, id auth.SubjectID) (auth.Subject, error)
+}
+
+// AuthenticateRefreshToken implements auth.RefreshTokenAuthenticator.
+func (a RefreshTokenAuthenticator) AuthenticateRefreshToken(ctx context.Context, service string, refreshToken string) (auth.Subject, error) {
+	subjectID, err := a.verifier.VerifyRefreshToken(ctx, service, refreshToken)
+	if err != nil {
+		return nil, err
+	}
+
+	subject, err := a.subjectRepository.GetSubjectByID(ctx, subjectID)
+	if err != nil {
+		return nil, err
+	}
+
+	return subject, nil
 }
