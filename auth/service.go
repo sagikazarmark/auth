@@ -57,15 +57,25 @@ type OAuth2TokenResponse struct {
 	RefreshToken string `json:"refresh_token,omitempty"`
 }
 
+// Authenticator is a facade combining different type of authenticators.
+type Authenticator struct {
+	PasswordAuthenticator
+	RefreshTokenAuthenticator
+}
+
+// TokenIssuer is a facade combining different type of token issuers.
+type TokenIssuer struct {
+	AccessTokenIssuer
+	RefreshTokenIssuer
+}
+
 // TokenServer implements the [Docker Registry v2 authentication] specification.
 //
 // [Docker Registry v2 authentication]: https://github.com/distribution/distribution/blob/main/docs/spec/auth/index.md
 type TokenServiceImpl struct {
-	Authenticator             PasswordAuthenticator
-	Authorizer                Authorizer
-	AccessTokenIssuer         AccessTokenIssuer
-	RefreshTokenAuthenticator RefreshTokenAuthenticator
-	RefreshTokenIssuer        RefreshTokenIssuer
+	Authenticator Authenticator
+	Authorizer    Authorizer
+	TokenIssuer   TokenIssuer
 
 	Logger *zap.Logger
 }
@@ -79,7 +89,7 @@ func (s TokenServiceImpl) TokenHandler(ctx context.Context, r TokenRequest) (Tok
 	if !r.Anonymous {
 		var err error
 
-		subject, err = s.Authenticator.Authenticate(ctx, r.Username, r.Password)
+		subject, err = s.Authenticator.AuthenticatePassword(ctx, r.Username, r.Password)
 		if err != nil {
 			return TokenResponse{}, err
 		}
@@ -98,7 +108,7 @@ func (s TokenServiceImpl) TokenHandler(ctx context.Context, r TokenRequest) (Tok
 		return TokenResponse{}, err
 	}
 
-	token, err := s.AccessTokenIssuer.IssueAccessToken(subject, []string{r.Service}, grantedScopes)
+	token, err := s.TokenIssuer.IssueAccessToken(ctx, r.Service, subject, grantedScopes)
 	if err != nil {
 		return TokenResponse{}, err
 	}
@@ -111,7 +121,7 @@ func (s TokenServiceImpl) TokenHandler(ctx context.Context, r TokenRequest) (Tok
 	}
 
 	if r.Offline && subject != nil {
-		refreshToken, err := s.RefreshTokenIssuer.IssueRefreshToken(ctx, subject)
+		refreshToken, err := s.TokenIssuer.IssueRefreshToken(ctx, r.Service, subject)
 		if err != nil {
 			return TokenResponse{}, err
 		}
@@ -141,7 +151,7 @@ func (s TokenServiceImpl) OAuth2TokenHandler(ctx context.Context, r OAuth2TokenR
 
 		var err error
 
-		subject, err = s.RefreshTokenAuthenticator.Authenticate(ctx, refreshToken)
+		subject, err = s.Authenticator.AuthenticateRefreshToken(ctx, r.Service, refreshToken)
 		if err != nil {
 			return OAuth2TokenResponse{}, err
 		}
@@ -161,7 +171,7 @@ func (s TokenServiceImpl) OAuth2TokenHandler(ctx context.Context, r OAuth2TokenR
 
 		var err error
 
-		subject, err = s.Authenticator.Authenticate(ctx, username, password)
+		subject, err = s.Authenticator.AuthenticatePassword(ctx, username, password)
 		if err != nil {
 			return OAuth2TokenResponse{}, err
 		}
@@ -180,7 +190,7 @@ func (s TokenServiceImpl) OAuth2TokenHandler(ctx context.Context, r OAuth2TokenR
 		return OAuth2TokenResponse{}, err
 	}
 
-	token, err := s.AccessTokenIssuer.IssueAccessToken(subject, []string{r.Service}, grantedScopes)
+	token, err := s.TokenIssuer.IssueAccessToken(ctx, r.Service, subject, grantedScopes)
 	if err != nil {
 		return OAuth2TokenResponse{}, err
 	}
@@ -195,7 +205,7 @@ func (s TokenServiceImpl) OAuth2TokenHandler(ctx context.Context, r OAuth2TokenR
 	}
 
 	if r.AccessType == "offline" && subject != nil && r.GrantType == "refresh_token" {
-		token, err := s.RefreshTokenIssuer.IssueRefreshToken(ctx, subject)
+		token, err := s.TokenIssuer.IssueRefreshToken(ctx, r.Service, subject)
 		if err != nil {
 			return OAuth2TokenResponse{}, err
 		}

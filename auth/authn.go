@@ -15,5 +15,10 @@ var ErrAuthenticationFailed = errors.New("authentication failed")
 //
 // It returns an ErrAuthenticationFailed error in case credentials are invalid.
 type PasswordAuthenticator interface {
-	Authenticate(ctx context.Context, username string, password string) (Subject, error)
+	AuthenticatePassword(ctx context.Context, username string, password string) (Subject, error)
+}
+
+// RefreshTokenAuthenticator authenticates a refresh token.
+type RefreshTokenAuthenticator interface {
+	AuthenticateRefreshToken(ctx context.Context, service string, refreshToken string) (Subject, error)
 }
