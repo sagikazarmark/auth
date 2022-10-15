@@ -121,6 +121,8 @@ func main() {
 	router.Path("/token").Methods("GET").HandlerFunc(server.TokenHandler)
 	router.Path("/token").Methods("POST").HandlerFunc(server.OAuth2Handler)
 
+	logger.Info("launching server")
+
 	err = http.ListenAndServe(addr, router)
 	if err != nil {
 		logger.Sugar().Infof("Error serving: %v", err)
