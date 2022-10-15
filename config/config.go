@@ -1,7 +1,5 @@
 package config
 
-import "fmt"
-
 // Config collects all configuration options.
 type Config struct {
 	PasswordAuthenticator PasswordAuthenticator `yaml:"passwordAuthenticator"`
@@ -12,32 +10,16 @@ type Config struct {
 
 // Validate validates the configuration.
 func (c Config) Validate() error {
-	if c.PasswordAuthenticator.Type == "" {
-		return fmt.Errorf("authenticator type is required")
-	}
-
 	if err := c.PasswordAuthenticator.Config.Validate(); err != nil {
 		return err
-	}
-
-	if c.AccessTokenIssuer.Type == "" {
-		return fmt.Errorf("access token issuer type is required")
 	}
 
 	if err := c.AccessTokenIssuer.Config.Validate(); err != nil {
 		return err
 	}
 
-	if c.RefreshTokenIssuer.Type == "" {
-		return fmt.Errorf("refresh token issuer type is required")
-	}
-
 	if err := c.RefreshTokenIssuer.Config.Validate(); err != nil {
 		return err
-	}
-
-	if c.Authorizer.Type == "" {
-		return fmt.Errorf("authorizer type is required")
 	}
 
 	if err := c.Authorizer.Config.Validate(); err != nil {

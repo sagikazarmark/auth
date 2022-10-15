@@ -13,7 +13,6 @@ import (
 
 // AccessTokenIssuer is the configuration for an auth.AccessTokenIssuer.
 type AccessTokenIssuer struct {
-	Type   string `yaml:"type"`
 	Config AccessTokenIssuerFactory
 }
 
@@ -24,8 +23,6 @@ func (c *AccessTokenIssuer) UnmarshalYAML(value *yaml.Node) error {
 	if err != nil {
 		return err
 	}
-
-	c.Type = rawConfig.Type
 
 	var config AccessTokenIssuerFactory
 

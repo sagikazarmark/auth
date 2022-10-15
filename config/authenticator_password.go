@@ -42,7 +42,6 @@ func init() {
 
 // PasswordAuthenticator is the configuration for an auth.PasswordAuthenticator.
 type PasswordAuthenticator struct {
-	Type   string `yaml:"type"`
 	Config PasswordAuthenticatorFactory
 }
 
@@ -53,8 +52,6 @@ func (c *PasswordAuthenticator) UnmarshalYAML(value *yaml.Node) error {
 	if err != nil {
 		return err
 	}
-
-	c.Type = rawConfig.Type
 
 	passwordAuthenticatorFactoriesMu.RLock()
 	factory, ok := passwordAuthenticatorFactories[rawConfig.Type]

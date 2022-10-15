@@ -12,7 +12,6 @@ import (
 
 // RefreshTokenIssuer is the configuration for an auth.RefreshTokenIssuer.
 type RefreshTokenIssuer struct {
-	Type   string `yaml:"type"`
 	Config RefreshTokenIssuerFactory
 }
 
@@ -23,8 +22,6 @@ func (c *RefreshTokenIssuer) UnmarshalYAML(value *yaml.Node) error {
 	if err != nil {
 		return err
 	}
-
-	c.Type = rawConfig.Type
 
 	var config RefreshTokenIssuerFactory
 

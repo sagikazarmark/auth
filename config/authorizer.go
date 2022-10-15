@@ -11,7 +11,6 @@ import (
 
 // Authorizer is the configuration for an auth.Authorizer.
 type Authorizer struct {
-	Type   string `yaml:"type"`
 	Config AuthorizerFactory
 }
 
@@ -22,8 +21,6 @@ func (c *Authorizer) UnmarshalYAML(value *yaml.Node) error {
 	if err != nil {
 		return err
 	}
-
-	c.Type = rawConfig.Type
 
 	var config AuthorizerFactory
 
