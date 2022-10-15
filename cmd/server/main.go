@@ -72,17 +72,17 @@ func main() {
 		logger.Sugar().Fatalf("invalid configuration: %v", err)
 	}
 
-	passwordAuthenticator, err := config.Authenticator.Config.CreateAuthenticator()
+	passwordAuthenticator, err := config.PasswordAuthenticator.CreatePasswordAuthenticator()
 	if err != nil {
 		logger.Sugar().Fatalf("creating authenticator: %v", err)
 	}
 
-	accessTokenIssuer, err := config.AccessTokenIssuer.Config.CreateAccessTokenIssuer()
+	accessTokenIssuer, err := config.AccessTokenIssuer.CreateAccessTokenIssuer()
 	if err != nil {
 		logger.Sugar().Fatalf("creating access token issuer: %v", err)
 	}
 
-	refreshTokenIssuer, err := config.RefreshTokenIssuer.Config.CreateRefreshTokenIssuer()
+	refreshTokenIssuer, err := config.RefreshTokenIssuer.CreateRefreshTokenIssuer()
 	if err != nil {
 		logger.Sugar().Fatalf("creating refresh token issuer: %v", err)
 	}
@@ -100,7 +100,7 @@ func main() {
 		RefreshTokenAuthenticator: refreshTokenAuthenticator,
 	}
 
-	authorizer, err := config.Authorizer.Config.CreateAuthorizer()
+	authorizer, err := config.Authorizer.CreateAuthorizer()
 	if err != nil {
 		logger.Sugar().Fatalf("creating authorizer issuer: %v", err)
 	}
@@ -120,6 +120,8 @@ func main() {
 	router := mux.NewRouter()
 	router.Path("/token").Methods("GET").HandlerFunc(server.TokenHandler)
 	router.Path("/token").Methods("POST").HandlerFunc(server.OAuth2Handler)
+
+	logger.Info("launching server")
 
 	err = http.ListenAndServe(addr, router)
 	if err != nil {

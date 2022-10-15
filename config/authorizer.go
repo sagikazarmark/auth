@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"sync"
 
 	"gopkg.in/yaml.v3"
 
@@ -9,10 +10,37 @@ import (
 	"github.com/distribution-auth/auth/auth/authz"
 )
 
+var (
+	authorizerFactoriesMu sync.RWMutex
+	authorizerFactories   = make(map[string]AuthorizerFactory)
+)
+
+// RegisterAuthorizerFactory makes an AuthenticatorFactory available by the provided name in configuration.
+//
+// If RegisterAuthorizerFactory is called twice with the same name or if factory is nil,
+// it panics.
+func RegisterAuthorizerFactory(name string, factory AuthorizerFactory) {
+	authorizerFactoriesMu.Lock()
+	defer authorizerFactoriesMu.Unlock()
+
+	if factory == nil {
+		panic("registering authorizer factory: factory is nil")
+	}
+
+	if _, dup := authorizerFactories[name]; dup {
+		panic("registering authorizer factory: registration called twice for factory " + name)
+	}
+
+	authorizerFactories[name] = factory
+}
+
+func init() {
+	RegisterAuthorizerFactory("default", defaultAuthorizer{})
+}
+
 // Authorizer is the configuration for an auth.Authorizer.
 type Authorizer struct {
-	Type   string `yaml:"type"`
-	Config AuthorizerFactory
+	AuthorizerFactory
 }
 
 func (c *Authorizer) UnmarshalYAML(value *yaml.Node) error {
@@ -23,38 +51,37 @@ func (c *Authorizer) UnmarshalYAML(value *yaml.Node) error {
 		return err
 	}
 
-	c.Type = rawConfig.Type
+	authorizerFactoriesMu.RLock()
+	factory, ok := authorizerFactories[rawConfig.Type]
+	authorizerFactoriesMu.RUnlock()
 
-	var config AuthorizerFactory
-
-	switch rawConfig.Type {
-	case "default":
-		var factory defaultAuthorizer
-
-		err := decode(rawConfig.Config, &factory)
-		if err != nil {
-			return err
-		}
-
-		config = factory
-
-	default:
-		return fmt.Errorf("unknown authenticator type: %s", rawConfig.Type)
+	if !ok {
+		return fmt.Errorf("unknown authorizer type: %s", rawConfig.Type)
 	}
 
-	c.Config = config
+	err = decode(rawConfig.Config, &factory)
+	if err != nil {
+		return err
+	}
+
+	c.AuthorizerFactory = factory
 
 	return nil
 }
 
 // AuthorizerFactory creates a new auth.Authorizer.
 type AuthorizerFactory interface {
+	New() AuthorizerFactory
 	CreateAuthorizer() (auth.Authorizer, error)
 	Validate() error
 }
 
 type defaultAuthorizer struct {
 	AllowAnonymous bool `mapstructure:"allowAnonymous"`
+}
+
+func (c defaultAuthorizer) New() AuthorizerFactory {
+	return defaultAuthorizer{}
 }
 
 func (c defaultAuthorizer) CreateAuthorizer() (auth.Authorizer, error) {
