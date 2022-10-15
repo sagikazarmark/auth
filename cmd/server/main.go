@@ -72,7 +72,7 @@ func main() {
 		logger.Sugar().Fatalf("invalid configuration: %v", err)
 	}
 
-	passwordAuthenticator, err := config.Authenticator.Config.CreateAuthenticator()
+	passwordAuthenticator, err := config.PasswordAuthenticator.Config.CreatePasswordAuthenticator()
 	if err != nil {
 		logger.Sugar().Fatalf("creating authenticator: %v", err)
 	}

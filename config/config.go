@@ -4,19 +4,19 @@ import "fmt"
 
 // Config collects all configuration options.
 type Config struct {
-	Authenticator      Authenticator      `yaml:"authenticator"`
-	AccessTokenIssuer  AccessTokenIssuer  `yaml:"accessTokenIssuer"`
-	RefreshTokenIssuer RefreshTokenIssuer `yaml:"refreshTokenIssuer"`
-	Authorizer         Authorizer         `yaml:"authorizer"`
+	PasswordAuthenticator PasswordAuthenticator `yaml:"passwordAuthenticator"`
+	AccessTokenIssuer     AccessTokenIssuer     `yaml:"accessTokenIssuer"`
+	RefreshTokenIssuer    RefreshTokenIssuer    `yaml:"refreshTokenIssuer"`
+	Authorizer            Authorizer            `yaml:"authorizer"`
 }
 
 // Validate validates the configuration.
 func (c Config) Validate() error {
-	if c.Authenticator.Type == "" {
+	if c.PasswordAuthenticator.Type == "" {
 		return fmt.Errorf("authenticator type is required")
 	}
 
-	if err := c.Authenticator.Config.Validate(); err != nil {
+	if err := c.PasswordAuthenticator.Config.Validate(); err != nil {
 		return err
 	}
 
