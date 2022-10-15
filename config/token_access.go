@@ -42,7 +42,7 @@ func init() {
 
 // AccessTokenIssuer is the configuration for an auth.AccessTokenIssuer.
 type AccessTokenIssuer struct {
-	Config AccessTokenIssuerFactory
+	AccessTokenIssuerFactory
 }
 
 func (c *AccessTokenIssuer) UnmarshalYAML(value *yaml.Node) error {
@@ -66,7 +66,7 @@ func (c *AccessTokenIssuer) UnmarshalYAML(value *yaml.Node) error {
 		return err
 	}
 
-	c.Config = factory
+	c.AccessTokenIssuerFactory = factory
 
 	return nil
 }

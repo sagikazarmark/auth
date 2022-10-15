@@ -42,7 +42,7 @@ func init() {
 
 // PasswordAuthenticator is the configuration for an auth.PasswordAuthenticator.
 type PasswordAuthenticator struct {
-	Config PasswordAuthenticatorFactory
+	PasswordAuthenticatorFactory
 }
 
 func (c *PasswordAuthenticator) UnmarshalYAML(value *yaml.Node) error {
@@ -66,7 +66,7 @@ func (c *PasswordAuthenticator) UnmarshalYAML(value *yaml.Node) error {
 		return err
 	}
 
-	c.Config = factory
+	c.PasswordAuthenticatorFactory = factory
 
 	return nil
 }

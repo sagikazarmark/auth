@@ -40,7 +40,7 @@ func init() {
 
 // Authorizer is the configuration for an auth.Authorizer.
 type Authorizer struct {
-	Config AuthorizerFactory
+	AuthorizerFactory
 }
 
 func (c *Authorizer) UnmarshalYAML(value *yaml.Node) error {
@@ -64,7 +64,7 @@ func (c *Authorizer) UnmarshalYAML(value *yaml.Node) error {
 		return err
 	}
 
-	c.Config = factory
+	c.AuthorizerFactory = factory
 
 	return nil
 }

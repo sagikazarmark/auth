@@ -10,19 +10,19 @@ type Config struct {
 
 // Validate validates the configuration.
 func (c Config) Validate() error {
-	if err := c.PasswordAuthenticator.Config.Validate(); err != nil {
+	if err := c.PasswordAuthenticator.Validate(); err != nil {
 		return err
 	}
 
-	if err := c.AccessTokenIssuer.Config.Validate(); err != nil {
+	if err := c.AccessTokenIssuer.Validate(); err != nil {
 		return err
 	}
 
-	if err := c.RefreshTokenIssuer.Config.Validate(); err != nil {
+	if err := c.RefreshTokenIssuer.Validate(); err != nil {
 		return err
 	}
 
-	if err := c.Authorizer.Config.Validate(); err != nil {
+	if err := c.Authorizer.Validate(); err != nil {
 		return err
 	}
 

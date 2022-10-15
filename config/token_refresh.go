@@ -41,7 +41,7 @@ func init() {
 
 // RefreshTokenIssuer is the configuration for an auth.RefreshTokenIssuer.
 type RefreshTokenIssuer struct {
-	Config RefreshTokenIssuerFactory
+	RefreshTokenIssuerFactory
 }
 
 func (c *RefreshTokenIssuer) UnmarshalYAML(value *yaml.Node) error {
@@ -65,7 +65,7 @@ func (c *RefreshTokenIssuer) UnmarshalYAML(value *yaml.Node) error {
 		return err
 	}
 
-	c.Config = factory
+	c.RefreshTokenIssuerFactory = factory
 
 	return nil
 }
