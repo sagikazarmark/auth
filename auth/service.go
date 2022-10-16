@@ -2,11 +2,17 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"go.uber.org/zap"
+	"golang.org/x/exp/slices"
 )
 
+// TokenService implements both the [Docker Registry v2 authentication] and the [Docker Registry v2 OAuth2 authentication] specification.
+//
+// [Docker Registry v2 authentication]: https://github.com/distribution/distribution/blob/main/docs/spec/auth/token.md
+// [Docker Registry v2 OAuth2 authentication]: https://github.com/distribution/distribution/blob/main/docs/spec/auth/oauth.md
 type TokenService interface {
 	// TokenHandler implements the [Docker Registry v2 authentication] specification.
 	//
@@ -19,6 +25,9 @@ type TokenService interface {
 	OAuth2Handler(ctx context.Context, r OAuth2Request) (OAuth2Response, error)
 }
 
+// TokenRequest implements the token request defined in the [Docker Registry v2 authentication] specification.
+//
+// [Docker Registry v2 authentication]: https://github.com/distribution/distribution/blob/main/docs/spec/auth/token.md
 type TokenRequest struct {
 	Service  string
 	ClientID string
@@ -30,12 +39,30 @@ type TokenRequest struct {
 	Password  string
 }
 
+func (r TokenRequest) Validate() error {
+	if r.Service == "" {
+		return errors.New("service is required")
+	}
+
+	if r.ClientID == "" {
+		return errors.New("client ID is required")
+	}
+
+	return nil
+}
+
+// TokenResponse implements the token response defined in the [Docker Registry v2 authentication] specification.
+//
+// [Docker Registry v2 authentication]: https://github.com/distribution/distribution/blob/main/docs/spec/auth/token.md
 type TokenResponse struct {
 	Token        string `json:"access_token"`
 	RefreshToken string `json:"refresh_token,omitempty"`
 	ExpiresIn    int    `json:"expires_in,omitempty"`
 }
 
+// OAuth2Request implements the token request defined in the [Docker Registry v2 OAuth2 authentication] specification.
+//
+// [Docker Registry v2 OAuth2 authentication]: https://github.com/distribution/distribution/blob/main/docs/spec/auth/oauth.md
 type OAuth2Request struct {
 	GrantType string
 
@@ -49,6 +76,69 @@ type OAuth2Request struct {
 	RefreshToken string
 }
 
+// TODO: oauth2 error
+func (r OAuth2Request) Validate() error {
+	if r.Service == "" {
+		return errors.New("service is required")
+	}
+
+	if r.ClientID == "" {
+		return errors.New("client ID is required")
+	}
+
+	if r.GrantType == "" {
+		return errors.New("missing grant_type value")
+	}
+
+	if !slices.Contains(validGrantTypes, r.GrantType) {
+		return errors.New("unknown grant_type value")
+	}
+
+	if r.GrantType == GrantTypeRefreshToken {
+		if r.RefreshToken == "" {
+			return errors.New("missing refresh_token value")
+		}
+	}
+
+	if r.GrantType == GrantTypePassword {
+		if r.Username == "" {
+			return errors.New("missing username value")
+		}
+
+		if r.Password == "" {
+			return errors.New("missing password value")
+		}
+	}
+
+	if !slices.Contains(validAccessTypes, r.AccessType) {
+		return errors.New("unknown access_type value")
+	}
+
+	return nil
+}
+
+const (
+	GrantTypeRefreshToken = "refresh_token"
+	GrantTypePassword     = "password"
+
+	AccessTypeOnline  = "online"
+	AccessTypeOffline = "offline"
+)
+
+var validGrantTypes = []string{
+	GrantTypeRefreshToken,
+	GrantTypePassword,
+}
+
+var validAccessTypes = []string{
+	"",
+	AccessTypeOnline,
+	AccessTypeOffline,
+}
+
+// OAuth2Response implements the token response defined in the [Docker Registry v2 OAuth2 authentication] specification.
+//
+// [Docker Registry v2 OAuth2 authentication]: https://github.com/distribution/distribution/blob/main/docs/spec/auth/oauth.md
 type OAuth2Response struct {
 	Token        string `json:"access_token"`
 	Scope        string `json:"scope,omitempty"`
@@ -84,6 +174,10 @@ type TokenServiceImpl struct {
 //
 // [Docker Registry v2 authentication]: https://github.com/distribution/distribution/blob/main/docs/spec/auth/token.md
 func (s TokenServiceImpl) TokenHandler(ctx context.Context, r TokenRequest) (TokenResponse, error) {
+	if err := r.Validate(); err != nil {
+		return TokenResponse{}, err
+	}
+
 	var subject Subject
 
 	if !r.Anonymous {
@@ -94,9 +188,6 @@ func (s TokenServiceImpl) TokenHandler(ctx context.Context, r TokenRequest) (Tok
 			return TokenResponse{}, err
 		}
 	}
-
-	// TODO: handle missing service value
-	// TODO: missing client_id
 
 	grantedScopes, err := s.Authorizer.Authorize(ctx, subject, r.Scopes)
 	if err != nil {
@@ -128,51 +219,33 @@ func (s TokenServiceImpl) TokenHandler(ctx context.Context, r TokenRequest) (Tok
 }
 
 func (s TokenServiceImpl) OAuth2Handler(ctx context.Context, r OAuth2Request) (OAuth2Response, error) {
-	// TODO: OAuth2 error: missing grant_type value
-	// TODO: OAuth2 error: missing service value
-	// TODO: OAuth2 error: missing client_id value
-	// TODO: OAuth2 error: unknown access_type value
+	if err := r.Validate(); err != nil {
+		return OAuth2Response{}, err
+	}
 
 	var subject Subject
 	var refreshToken string
 
 	switch r.GrantType {
-	case "refresh_token":
-		refreshToken = r.RefreshToken
-		if refreshToken == "" {
-			// TODO: OAuth2 error: missing refresh_token value
-			return OAuth2Response{}, nil
-		}
-
+	case GrantTypeRefreshToken:
 		var err error
 
-		subject, err = s.Authenticator.AuthenticateRefreshToken(ctx, r.Service, refreshToken)
+		subject, err = s.Authenticator.AuthenticateRefreshToken(ctx, r.Service, r.RefreshToken)
 		if err != nil {
 			return OAuth2Response{}, err
 		}
 
-		// TODO: check if service is the same as stored in the refresh token
-	case "password":
-		username := r.Username
-		if username == "" {
-			// TODO: OAuth2 error: missing username value
-			return OAuth2Response{}, nil
-		}
-		password := r.Password
-		if password == "" {
-			// TODO: OAuth2 error: missing password value
-			return OAuth2Response{}, nil
-		}
-
+		refreshToken = r.RefreshToken
+	case GrantTypePassword:
 		var err error
 
-		subject, err = s.Authenticator.AuthenticatePassword(ctx, username, password)
+		subject, err = s.Authenticator.AuthenticatePassword(ctx, r.Username, r.Password)
 		if err != nil {
 			return OAuth2Response{}, err
 		}
 	default:
-		// TODO: OAuth2 error: unknown grant_type value
-		return OAuth2Response{}, nil
+		// This should never happen
+		return OAuth2Response{}, errors.New("unknown grant_type value")
 	}
 
 	grantedScopes, err := s.Authorizer.Authorize(ctx, subject, r.Scopes)
@@ -194,7 +267,7 @@ func (s TokenServiceImpl) OAuth2Handler(ctx context.Context, r OAuth2Request) (O
 		Scope:     Scopes(grantedScopes).String(),
 	}
 
-	if r.AccessType == "offline" && subject != nil && r.GrantType == "refresh_token" {
+	if r.AccessType == AccessTypeOffline && subject != nil && r.GrantType == GrantTypeRefreshToken {
 		token, err := s.TokenIssuer.IssueRefreshToken(ctx, r.Service, subject)
 		if err != nil {
 			return OAuth2Response{}, err
