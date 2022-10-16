@@ -117,3 +117,28 @@ func TestScope_String(t *testing.T) {
 		})
 	}
 }
+
+func TestParseScopes(t *testing.T) {
+	t.Run("OK", func(t *testing.T) {
+		testCases := []struct {
+			scopes   []string
+			expected []auth.Scope
+		}{
+			{
+				nil,
+				nil,
+			},
+		}
+
+		for _, testCase := range testCases {
+			testCase := testCase
+
+			t.Run("", func(t *testing.T) {
+				actual, err := auth.ParseScopes(testCase.scopes)
+				require.NoError(t, err)
+
+				assert.Equal(t, testCase.expected, actual)
+			})
+		}
+	})
+}

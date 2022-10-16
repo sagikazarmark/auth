@@ -16,18 +16,18 @@ type TokenService interface {
 	// OAuth2Handler implements the [Docker Registry v2 OAuth2 authentication] specification.
 	//
 	// [Docker Registry v2 OAuth2 authentication]: https://github.com/distribution/distribution/blob/main/docs/spec/auth/oauth.md
-	OAuth2TokenHandler(ctx context.Context, r OAuth2TokenRequest) (OAuth2TokenResponse, error)
+	OAuth2Handler(ctx context.Context, r OAuth2Request) (OAuth2Response, error)
 }
 
 type TokenRequest struct {
-	Service  string   `schema:"service"`
-	ClientID string   `schema:"client_id"`
-	Offline  bool     `schema:"offline_token"`
-	Scope    []string `schema:"scope"`
+	Service  string
+	ClientID string
+	Offline  bool
+	Scopes   Scopes
 
-	Anonymous bool   `schema:"-"`
-	Username  string `schema:"-"`
-	Password  string `schema:"-"`
+	Anonymous bool
+	Username  string
+	Password  string
 }
 
 type TokenResponse struct {
@@ -36,20 +36,20 @@ type TokenResponse struct {
 	ExpiresIn    int    `json:"expires_in,omitempty"`
 }
 
-type OAuth2TokenRequest struct {
-	GrantType string `schema:"grant_type"`
+type OAuth2Request struct {
+	GrantType string
 
-	Service    string   `schema:"service"`
-	ClientID   string   `schema:"client_id"`
-	AccessType string   `schema:"access_type"`
-	Scope      []string `schema:"scope"`
+	Service    string
+	ClientID   string
+	AccessType string
+	Scopes     Scopes
 
-	Username     string `schema:"username"`
-	Password     string `schema:"password"`
-	RefreshToken string `schema:"refresh_token"`
+	Username     string
+	Password     string
+	RefreshToken string
 }
 
-type OAuth2TokenResponse struct {
+type OAuth2Response struct {
 	Token        string `json:"access_token"`
 	Scope        string `json:"scope,omitempty"`
 	ExpiresIn    int    `json:"expires_in,omitempty"`
@@ -98,12 +98,7 @@ func (s TokenServiceImpl) TokenHandler(ctx context.Context, r TokenRequest) (Tok
 	// TODO: handle missing service value
 	// TODO: missing client_id
 
-	requestedScopes, err := ParseScopes(r.Scope)
-	if err != nil {
-		return TokenResponse{}, err
-	}
-
-	grantedScopes, err := s.Authorizer.Authorize(ctx, subject, requestedScopes)
+	grantedScopes, err := s.Authorizer.Authorize(ctx, subject, r.Scopes)
 	if err != nil {
 		return TokenResponse{}, err
 	}
@@ -132,7 +127,7 @@ func (s TokenServiceImpl) TokenHandler(ctx context.Context, r TokenRequest) (Tok
 	return response, nil
 }
 
-func (s TokenServiceImpl) OAuth2TokenHandler(ctx context.Context, r OAuth2TokenRequest) (OAuth2TokenResponse, error) {
+func (s TokenServiceImpl) OAuth2Handler(ctx context.Context, r OAuth2Request) (OAuth2Response, error) {
 	// TODO: OAuth2 error: missing grant_type value
 	// TODO: OAuth2 error: missing service value
 	// TODO: OAuth2 error: missing client_id value
@@ -146,14 +141,14 @@ func (s TokenServiceImpl) OAuth2TokenHandler(ctx context.Context, r OAuth2TokenR
 		refreshToken = r.RefreshToken
 		if refreshToken == "" {
 			// TODO: OAuth2 error: missing refresh_token value
-			return OAuth2TokenResponse{}, nil
+			return OAuth2Response{}, nil
 		}
 
 		var err error
 
 		subject, err = s.Authenticator.AuthenticateRefreshToken(ctx, r.Service, refreshToken)
 		if err != nil {
-			return OAuth2TokenResponse{}, err
+			return OAuth2Response{}, err
 		}
 
 		// TODO: check if service is the same as stored in the refresh token
@@ -161,43 +156,38 @@ func (s TokenServiceImpl) OAuth2TokenHandler(ctx context.Context, r OAuth2TokenR
 		username := r.Username
 		if username == "" {
 			// TODO: OAuth2 error: missing username value
-			return OAuth2TokenResponse{}, nil
+			return OAuth2Response{}, nil
 		}
 		password := r.Password
 		if password == "" {
 			// TODO: OAuth2 error: missing password value
-			return OAuth2TokenResponse{}, nil
+			return OAuth2Response{}, nil
 		}
 
 		var err error
 
 		subject, err = s.Authenticator.AuthenticatePassword(ctx, username, password)
 		if err != nil {
-			return OAuth2TokenResponse{}, err
+			return OAuth2Response{}, err
 		}
 	default:
 		// TODO: OAuth2 error: unknown grant_type value
-		return OAuth2TokenResponse{}, nil
+		return OAuth2Response{}, nil
 	}
 
-	requestedScopes, err := ParseScopes(r.Scope)
+	grantedScopes, err := s.Authorizer.Authorize(ctx, subject, r.Scopes)
 	if err != nil {
-		return OAuth2TokenResponse{}, err
-	}
-
-	grantedScopes, err := s.Authorizer.Authorize(ctx, subject, requestedScopes)
-	if err != nil {
-		return OAuth2TokenResponse{}, err
+		return OAuth2Response{}, err
 	}
 
 	token, err := s.TokenIssuer.IssueAccessToken(ctx, r.Service, subject, grantedScopes)
 	if err != nil {
-		return OAuth2TokenResponse{}, err
+		return OAuth2Response{}, err
 	}
 
 	s.Logger.Debug("client authorized")
 
-	response := OAuth2TokenResponse{
+	response := OAuth2Response{
 		Token:     token.Payload,
 		ExpiresIn: int(token.ExpiresIn.Seconds()),
 		IssuedAt:  token.IssuedAt.Format(time.RFC3339),
@@ -207,7 +197,7 @@ func (s TokenServiceImpl) OAuth2TokenHandler(ctx context.Context, r OAuth2TokenR
 	if r.AccessType == "offline" && subject != nil && r.GrantType == "refresh_token" {
 		token, err := s.TokenIssuer.IssueRefreshToken(ctx, r.Service, subject)
 		if err != nil {
-			return OAuth2TokenResponse{}, err
+			return OAuth2Response{}, err
 		}
 
 		refreshToken = token
