@@ -2,11 +2,17 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"go.uber.org/zap"
+	"golang.org/x/exp/slices"
 )
 
+// TokenService implements both the [Docker Registry v2 authentication] and the [Docker Registry v2 OAuth2 authentication] specification.
+//
+// [Docker Registry v2 authentication]: https://github.com/distribution/distribution/blob/main/docs/spec/auth/token.md
+// [Docker Registry v2 OAuth2 authentication]: https://github.com/distribution/distribution/blob/main/docs/spec/auth/oauth.md
 type TokenService interface {
 	// TokenHandler implements the [Docker Registry v2 authentication] specification.
 	//
@@ -16,40 +22,124 @@ type TokenService interface {
 	// OAuth2Handler implements the [Docker Registry v2 OAuth2 authentication] specification.
 	//
 	// [Docker Registry v2 OAuth2 authentication]: https://github.com/distribution/distribution/blob/main/docs/spec/auth/oauth.md
-	OAuth2TokenHandler(ctx context.Context, r OAuth2TokenRequest) (OAuth2TokenResponse, error)
+	OAuth2Handler(ctx context.Context, r OAuth2Request) (OAuth2Response, error)
 }
 
+// TokenRequest implements the token request defined in the [Docker Registry v2 authentication] specification.
+//
+// [Docker Registry v2 authentication]: https://github.com/distribution/distribution/blob/main/docs/spec/auth/token.md
 type TokenRequest struct {
-	Service  string   `schema:"service"`
-	ClientID string   `schema:"client_id"`
-	Offline  bool     `schema:"offline_token"`
-	Scope    []string `schema:"scope"`
+	Service  string
+	ClientID string
+	Offline  bool
+	Scopes   Scopes
 
-	Anonymous bool   `schema:"-"`
-	Username  string `schema:"-"`
-	Password  string `schema:"-"`
+	Anonymous bool
+	Username  string
+	Password  string
 }
 
+func (r TokenRequest) Validate() error {
+	if r.Service == "" {
+		return errors.New("service is required")
+	}
+
+	if r.ClientID == "" {
+		return errors.New("client ID is required")
+	}
+
+	return nil
+}
+
+// TokenResponse implements the token response defined in the [Docker Registry v2 authentication] specification.
+//
+// [Docker Registry v2 authentication]: https://github.com/distribution/distribution/blob/main/docs/spec/auth/token.md
 type TokenResponse struct {
 	Token        string `json:"access_token"`
 	RefreshToken string `json:"refresh_token,omitempty"`
 	ExpiresIn    int    `json:"expires_in,omitempty"`
 }
 
-type OAuth2TokenRequest struct {
-	GrantType string `schema:"grant_type"`
+// OAuth2Request implements the token request defined in the [Docker Registry v2 OAuth2 authentication] specification.
+//
+// [Docker Registry v2 OAuth2 authentication]: https://github.com/distribution/distribution/blob/main/docs/spec/auth/oauth.md
+type OAuth2Request struct {
+	GrantType string
 
-	Service    string   `schema:"service"`
-	ClientID   string   `schema:"client_id"`
-	AccessType string   `schema:"access_type"`
-	Scope      []string `schema:"scope"`
+	Service    string
+	ClientID   string
+	AccessType string
+	Scopes     Scopes
 
-	Username     string `schema:"username"`
-	Password     string `schema:"password"`
-	RefreshToken string `schema:"refresh_token"`
+	Username     string
+	Password     string
+	RefreshToken string
 }
 
-type OAuth2TokenResponse struct {
+// TODO: oauth2 error
+func (r OAuth2Request) Validate() error {
+	if r.Service == "" {
+		return errors.New("service is required")
+	}
+
+	if r.ClientID == "" {
+		return errors.New("client ID is required")
+	}
+
+	if r.GrantType == "" {
+		return errors.New("missing grant_type value")
+	}
+
+	if !slices.Contains(validGrantTypes, r.GrantType) {
+		return errors.New("unknown grant_type value")
+	}
+
+	if r.GrantType == GrantTypeRefreshToken {
+		if r.RefreshToken == "" {
+			return errors.New("missing refresh_token value")
+		}
+	}
+
+	if r.GrantType == GrantTypePassword {
+		if r.Username == "" {
+			return errors.New("missing username value")
+		}
+
+		if r.Password == "" {
+			return errors.New("missing password value")
+		}
+	}
+
+	if !slices.Contains(validAccessTypes, r.AccessType) {
+		return errors.New("unknown access_type value")
+	}
+
+	return nil
+}
+
+const (
+	GrantTypeRefreshToken = "refresh_token"
+	GrantTypePassword     = "password"
+
+	AccessTypeOnline  = "online"
+	AccessTypeOffline = "offline"
+)
+
+var validGrantTypes = []string{
+	GrantTypeRefreshToken,
+	GrantTypePassword,
+}
+
+var validAccessTypes = []string{
+	"",
+	AccessTypeOnline,
+	AccessTypeOffline,
+}
+
+// OAuth2Response implements the token response defined in the [Docker Registry v2 OAuth2 authentication] specification.
+//
+// [Docker Registry v2 OAuth2 authentication]: https://github.com/distribution/distribution/blob/main/docs/spec/auth/oauth.md
+type OAuth2Response struct {
 	Token        string `json:"access_token"`
 	Scope        string `json:"scope,omitempty"`
 	ExpiresIn    int    `json:"expires_in,omitempty"`
@@ -84,6 +174,10 @@ type TokenServiceImpl struct {
 //
 // [Docker Registry v2 authentication]: https://github.com/distribution/distribution/blob/main/docs/spec/auth/token.md
 func (s TokenServiceImpl) TokenHandler(ctx context.Context, r TokenRequest) (TokenResponse, error) {
+	if err := r.Validate(); err != nil {
+		return TokenResponse{}, err
+	}
+
 	var subject Subject
 
 	if !r.Anonymous {
@@ -95,15 +189,7 @@ func (s TokenServiceImpl) TokenHandler(ctx context.Context, r TokenRequest) (Tok
 		}
 	}
 
-	// TODO: handle missing service value
-	// TODO: missing client_id
-
-	requestedScopes, err := ParseScopes(r.Scope)
-	if err != nil {
-		return TokenResponse{}, err
-	}
-
-	grantedScopes, err := s.Authorizer.Authorize(ctx, subject, requestedScopes)
+	grantedScopes, err := s.Authorizer.Authorize(ctx, subject, r.Scopes)
 	if err != nil {
 		return TokenResponse{}, err
 	}
@@ -132,82 +218,59 @@ func (s TokenServiceImpl) TokenHandler(ctx context.Context, r TokenRequest) (Tok
 	return response, nil
 }
 
-func (s TokenServiceImpl) OAuth2TokenHandler(ctx context.Context, r OAuth2TokenRequest) (OAuth2TokenResponse, error) {
-	// TODO: OAuth2 error: missing grant_type value
-	// TODO: OAuth2 error: missing service value
-	// TODO: OAuth2 error: missing client_id value
-	// TODO: OAuth2 error: unknown access_type value
+func (s TokenServiceImpl) OAuth2Handler(ctx context.Context, r OAuth2Request) (OAuth2Response, error) {
+	if err := r.Validate(); err != nil {
+		return OAuth2Response{}, err
+	}
 
 	var subject Subject
 	var refreshToken string
 
 	switch r.GrantType {
-	case "refresh_token":
+	case GrantTypeRefreshToken:
+		var err error
+
+		subject, err = s.Authenticator.AuthenticateRefreshToken(ctx, r.Service, r.RefreshToken)
+		if err != nil {
+			return OAuth2Response{}, err
+		}
+
 		refreshToken = r.RefreshToken
-		if refreshToken == "" {
-			// TODO: OAuth2 error: missing refresh_token value
-			return OAuth2TokenResponse{}, nil
-		}
-
+	case GrantTypePassword:
 		var err error
 
-		subject, err = s.Authenticator.AuthenticateRefreshToken(ctx, r.Service, refreshToken)
+		subject, err = s.Authenticator.AuthenticatePassword(ctx, r.Username, r.Password)
 		if err != nil {
-			return OAuth2TokenResponse{}, err
-		}
-
-		// TODO: check if service is the same as stored in the refresh token
-	case "password":
-		username := r.Username
-		if username == "" {
-			// TODO: OAuth2 error: missing username value
-			return OAuth2TokenResponse{}, nil
-		}
-		password := r.Password
-		if password == "" {
-			// TODO: OAuth2 error: missing password value
-			return OAuth2TokenResponse{}, nil
-		}
-
-		var err error
-
-		subject, err = s.Authenticator.AuthenticatePassword(ctx, username, password)
-		if err != nil {
-			return OAuth2TokenResponse{}, err
+			return OAuth2Response{}, err
 		}
 	default:
-		// TODO: OAuth2 error: unknown grant_type value
-		return OAuth2TokenResponse{}, nil
+		// This should never happen
+		return OAuth2Response{}, errors.New("unknown grant_type value")
 	}
 
-	requestedScopes, err := ParseScopes(r.Scope)
+	grantedScopes, err := s.Authorizer.Authorize(ctx, subject, r.Scopes)
 	if err != nil {
-		return OAuth2TokenResponse{}, err
-	}
-
-	grantedScopes, err := s.Authorizer.Authorize(ctx, subject, requestedScopes)
-	if err != nil {
-		return OAuth2TokenResponse{}, err
+		return OAuth2Response{}, err
 	}
 
 	token, err := s.TokenIssuer.IssueAccessToken(ctx, r.Service, subject, grantedScopes)
 	if err != nil {
-		return OAuth2TokenResponse{}, err
+		return OAuth2Response{}, err
 	}
 
 	s.Logger.Debug("client authorized")
 
-	response := OAuth2TokenResponse{
+	response := OAuth2Response{
 		Token:     token.Payload,
 		ExpiresIn: int(token.ExpiresIn.Seconds()),
 		IssuedAt:  token.IssuedAt.Format(time.RFC3339),
 		Scope:     Scopes(grantedScopes).String(),
 	}
 
-	if r.AccessType == "offline" && subject != nil && r.GrantType == "refresh_token" {
+	if r.AccessType == AccessTypeOffline && subject != nil && r.GrantType == GrantTypeRefreshToken {
 		token, err := s.TokenIssuer.IssueRefreshToken(ctx, r.Service, subject)
 		if err != nil {
-			return OAuth2TokenResponse{}, err
+			return OAuth2Response{}, err
 		}
 
 		refreshToken = token
