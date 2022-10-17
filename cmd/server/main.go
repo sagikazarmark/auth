@@ -120,6 +120,7 @@ func main() {
 
 	server := auth.TokenServer{
 		Service: service,
+		Logger:  logger,
 	}
 
 	router := mux.NewRouter()
