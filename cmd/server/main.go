@@ -105,16 +105,22 @@ func main() {
 		logger.Sugar().Fatalf("creating authorizer issuer: %v", err)
 	}
 
-	service := auth.TokenServiceImpl{
+	var service auth.TokenService
+
+	service = auth.TokenServiceImpl{
 		Authenticator: authenticator,
 		Authorizer:    authorizer,
 		// Authorizer:    authz.NewDefaultAuthorizer(authz.NewDefaultRepositoryAuthorizer(false), false),
 		TokenIssuer: tokenIssuer,
-		Logger:      logger,
+	}
+	service = auth.LoggerTokenService{
+		Service: service,
+		Logger:  logger,
 	}
 
 	server := auth.TokenServer{
 		Service: service,
+		Logger:  logger,
 	}
 
 	router := mux.NewRouter()
