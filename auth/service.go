@@ -166,8 +166,6 @@ type TokenServiceImpl struct {
 	Authenticator Authenticator
 	Authorizer    Authorizer
 	TokenIssuer   TokenIssuer
-
-	Logger *zap.Logger
 }
 
 // TokenHandler implements the [Docker Registry v2 authentication] specification.
@@ -198,8 +196,6 @@ func (s TokenServiceImpl) TokenHandler(ctx context.Context, r TokenRequest) (Tok
 	if err != nil {
 		return TokenResponse{}, err
 	}
-
-	s.Logger.Debug("client authorized")
 
 	response := TokenResponse{
 		Token:     token.Payload,
@@ -258,8 +254,6 @@ func (s TokenServiceImpl) OAuth2Handler(ctx context.Context, r OAuth2Request) (O
 		return OAuth2Response{}, err
 	}
 
-	s.Logger.Debug("client authorized")
-
 	response := OAuth2Response{
 		Token:     token.Payload,
 		ExpiresIn: int(token.ExpiresIn.Seconds()),
@@ -281,4 +275,58 @@ func (s TokenServiceImpl) OAuth2Handler(ctx context.Context, r OAuth2Request) (O
 	}
 
 	return response, nil
+}
+
+// LoggerTokenService acts as a middleware for a TokenService and logs every request.
+type LoggerTokenService struct {
+	Service TokenService
+	Logger  *zap.Logger
+}
+
+// TokenHandler implements TokenService and logs every request.
+func (s LoggerTokenService) TokenHandler(ctx context.Context, r TokenRequest) (TokenResponse, error) {
+	resp, err := s.Service.TokenHandler(ctx, r)
+
+	logger := s.Logger.With(
+		// TODO: correlation ID
+		zap.String("client_id", r.ClientID),
+		zap.String("service", r.Service),
+		zap.String("scopes", r.Scopes.String()),
+		zap.Bool("offline", r.Offline),
+		zap.Bool("anonymous", r.Anonymous),
+	)
+
+	if err != nil && !(errors.Is(err, ErrUnauthorized) || errors.Is(err, ErrAuthenticationFailed)) {
+		logger.Error("authorization failed", zap.Error(err))
+	} else if err != nil {
+		logger.Info("authorization failed due to client error", zap.Error(err))
+	} else {
+		logger.Info("client authorized")
+	}
+
+	return resp, err
+}
+
+// OAuth2Handler implements TokenService and logs every request.
+func (s LoggerTokenService) OAuth2Handler(ctx context.Context, r OAuth2Request) (OAuth2Response, error) {
+	resp, err := s.Service.OAuth2Handler(ctx, r)
+
+	logger := s.Logger.With(
+		// TODO: correlation ID
+		zap.String("client_id", r.ClientID),
+		zap.String("service", r.Service),
+		zap.String("scopes", r.Scopes.String()),
+		zap.Bool("offline", r.AccessType == AccessTypeOffline),
+		zap.String("grant_type", r.GrantType),
+	)
+
+	if err != nil && !(errors.Is(err, ErrUnauthorized) || errors.Is(err, ErrAuthenticationFailed)) {
+		logger.Error("authorization failed", zap.Error(err))
+	} else if err != nil {
+		logger.Info("authorization failed due to client error", zap.Error(err))
+	} else {
+		logger.Info("client authorized")
+	}
+
+	return resp, err
 }
