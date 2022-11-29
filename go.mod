@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7
 	github.com/gofrs/uuid v4.3.0+incompatible
-	github.com/golang-jwt/jwt/v4 v4.4.2
+	github.com/golang-jwt/jwt/v4 v4.4.3
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/schema v1.2.0
 	github.com/jonboulle/clockwork v0.3.0
