@@ -12,7 +12,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/stretchr/testify v1.8.2
 	go.uber.org/zap v1.24.0
-	golang.org/x/crypto v0.7.0
+	golang.org/x/crypto v0.11.0
 	golang.org/x/exp v0.0.0-20220927162542-c76eaa363f9d
 	gopkg.in/yaml.v3 v3.0.1
 )
