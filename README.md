@@ -1,6 +1,6 @@
 # Distribution auth
 
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/distribution-auth/auth/CI?style=flat-square)](https://github.com/distribution-auth/auth/actions?query=workflow%3ACI)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/distribution-auth/auth/ci.yaml?style=flat-square)](https://github.com/distribution-auth/auth/actions/workflows/ci.yaml)
 [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/mod/github.com/distribution-auth/auth)
 [![built with nix](https://img.shields.io/badge/builtwith-nix-7d81f7?style=flat-square)](https://builtwithnix.org)
 
