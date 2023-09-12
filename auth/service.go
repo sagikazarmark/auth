@@ -4,9 +4,8 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"slices"
 	"time"
-
-	"golang.org/x/exp/slices"
 )
 
 // TokenService implements both the [Docker Registry v2 authentication] and the [Docker Registry v2 OAuth2 authentication] specification.

@@ -2,9 +2,9 @@ package authn
 
 import (
 	"context"
+	"maps"
 
 	"golang.org/x/crypto/bcrypt"
-	"golang.org/x/exp/maps"
 
 	"github.com/distribution-auth/auth/auth"
 )

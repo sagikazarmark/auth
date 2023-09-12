@@ -2,9 +2,9 @@ package config
 
 import (
 	"fmt"
+	"maps"
 	"sync"
 
-	"golang.org/x/exp/maps"
 	"gopkg.in/yaml.v3"
 
 	"github.com/distribution-auth/auth/auth"
