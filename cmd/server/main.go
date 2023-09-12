@@ -2,12 +2,13 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/gorilla/mux"
-	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 
 	"github.com/distribution-auth/auth/auth"
@@ -35,20 +36,20 @@ func main() {
 	flag.StringVar(&realm, "realm", "", "Authentication realm")
 	flag.Parse()
 
-	logger, err := zap.NewProduction()
-	if err != nil {
-		panic(err)
+	handlerOptions := &slog.HandlerOptions{
+		Level: slog.LevelInfo,
 	}
 
 	if debug {
-		logger, err = zap.NewDevelopment()
-		if err != nil {
-			panic(err)
-		}
+		handlerOptions.Level = slog.LevelDebug
 	}
 
+	logger := slog.New(slog.NewTextHandler(os.Stdout, handlerOptions))
+
 	if realm == "" {
-		logger.Sugar().Fatalf("Must provide realm")
+		logger.Error("must provide realm")
+
+		os.Exit(1)
 	}
 
 	var config config.Config
@@ -56,7 +57,9 @@ func main() {
 	{
 		file, err := os.Open(configFile)
 		if err != nil {
-			logger.Sugar().Fatalf("loading config file: %v", err)
+			logger.Error(fmt.Sprintf("loading config file: %v", err))
+
+			os.Exit(1)
 		}
 		defer file.Close()
 
@@ -64,27 +67,37 @@ func main() {
 
 		err = decoder.Decode(&config)
 		if err != nil {
-			logger.Sugar().Fatalf("decoding config file: %v", err)
+			logger.Error(fmt.Sprintf("decoding config file: %v", err))
+
+			os.Exit(1)
 		}
 	}
 
 	if err := config.Validate(); err != nil {
-		logger.Sugar().Fatalf("invalid configuration: %v", err)
+		logger.Error(fmt.Sprintf("invalid configuration: %v", err))
+
+		os.Exit(1)
 	}
 
 	passwordAuthenticator, err := config.PasswordAuthenticator.CreatePasswordAuthenticator()
 	if err != nil {
-		logger.Sugar().Fatalf("creating authenticator: %v", err)
+		logger.Error(fmt.Sprintf("creating authenticator: %v", err))
+
+		os.Exit(1)
 	}
 
 	accessTokenIssuer, err := config.AccessTokenIssuer.CreateAccessTokenIssuer()
 	if err != nil {
-		logger.Sugar().Fatalf("creating access token issuer: %v", err)
+		logger.Error(fmt.Sprintf("creating access token issuer: %v", err))
+
+		os.Exit(1)
 	}
 
 	refreshTokenIssuer, err := config.RefreshTokenIssuer.CreateRefreshTokenIssuer()
 	if err != nil {
-		logger.Sugar().Fatalf("creating refresh token issuer: %v", err)
+		logger.Error(fmt.Sprintf("creating refresh token issuer: %v", err))
+
+		os.Exit(1)
 	}
 
 	tokenIssuer := auth.TokenIssuer{
@@ -102,7 +115,9 @@ func main() {
 
 	authorizer, err := config.Authorizer.CreateAuthorizer()
 	if err != nil {
-		logger.Sugar().Fatalf("creating authorizer issuer: %v", err)
+		logger.Error(fmt.Sprintf("creating authorizer issuer: %v", err))
+
+		os.Exit(1)
 	}
 
 	var service auth.TokenService
@@ -131,6 +146,8 @@ func main() {
 
 	err = http.ListenAndServe(addr, router)
 	if err != nil {
-		logger.Sugar().Infof("Error serving: %v", err)
+		logger.Error(fmt.Sprintf("error serving: %v", err))
+
+		os.Exit(1)
 	}
 }
