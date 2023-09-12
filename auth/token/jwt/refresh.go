@@ -3,10 +3,11 @@ package jwt
 import (
 	"context"
 
-	"github.com/distribution-auth/auth/auth"
 	"github.com/docker/libtrust"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/jonboulle/clockwork"
+
+	"github.com/distribution-auth/auth/auth"
 )
 
 // RefreshTokenIssuer issues a refresh token.
@@ -36,7 +37,7 @@ func NewRefreshTokenIssuer(issuer string, signingKey libtrust.PrivateKey, opts .
 }
 
 // IssueRefreshToken implements auth.RefreshTokenIssuer.
-func (i RefreshTokenIssuer) IssueRefreshToken(ctx context.Context, service string, subject auth.Subject) (string, error) {
+func (i RefreshTokenIssuer) IssueRefreshToken(_ context.Context, service string, subject auth.Subject) (string, error) {
 	alg, err := detectSigningMethod(i.signingKey)
 	if err != nil {
 		return "", err
@@ -63,7 +64,7 @@ func (i RefreshTokenIssuer) IssueRefreshToken(ctx context.Context, service strin
 }
 
 // VerifyRefreshToken implements authn.RefreshTokenVerifier.
-func (i RefreshTokenIssuer) VerifyRefreshToken(ctx context.Context, service string, refreshToken string) (auth.SubjectID, error) {
+func (i RefreshTokenIssuer) VerifyRefreshToken(_ context.Context, service string, refreshToken string) (auth.SubjectID, error) {
 	var claims jwt.RegisteredClaims
 
 	token, err := jwt.ParseWithClaims(refreshToken, &claims, nil)
@@ -72,7 +73,7 @@ func (i RefreshTokenIssuer) VerifyRefreshToken(ctx context.Context, service stri
 	}
 	// TODO: validate audience/service/issuer?
 
-	if !token.Valid {
+	if !token.Valid { //nolint:staticcheck,revive
 		// TODO: return error?
 	}
 

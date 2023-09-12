@@ -5,11 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/distribution-auth/auth/auth"
 	"github.com/docker/libtrust"
 	"github.com/jonboulle/clockwork"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/distribution-auth/auth/auth"
 )
 
 type idGeneratorStub struct {

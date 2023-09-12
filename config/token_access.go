@@ -5,11 +5,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/docker/libtrust"
 	"gopkg.in/yaml.v3"
 
 	"github.com/distribution-auth/auth/auth"
 	"github.com/distribution-auth/auth/auth/token/jwt"
-	"github.com/docker/libtrust"
 )
 
 var (

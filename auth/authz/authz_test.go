@@ -38,7 +38,7 @@ type repositoryAuthorizerStub struct {
 	repositories map[string]bool
 }
 
-func (a repositoryAuthorizerStub) Authorize(_ context.Context, name string, subject auth.Subject, actions []string) ([]string, error) {
+func (a repositoryAuthorizerStub) Authorize(_ context.Context, name string, _ auth.Subject, actions []string) ([]string, error) {
 	if !a.repositories[name] {
 		return []string{}, nil
 	}

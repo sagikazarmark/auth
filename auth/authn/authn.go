@@ -65,7 +65,7 @@ func (a UserAuthenticator) AuthenticatePassword(_ context.Context, username stri
 	user, ok := a.entries[username]
 	if !ok || !user.Enabled {
 		// timing attack paranoia
-		bcrypt.CompareHashAndPassword([]byte{}, []byte(password))
+		_ = bcrypt.CompareHashAndPassword([]byte{}, []byte(password))
 
 		return nil, auth.ErrAuthenticationFailed
 	}
@@ -79,7 +79,7 @@ func (a UserAuthenticator) AuthenticatePassword(_ context.Context, username stri
 }
 
 // GetSubjectByID implements SubjectRepository.
-func (a UserAuthenticator) GetSubjectByID(ctx context.Context, id auth.SubjectID) (auth.Subject, error) {
+func (a UserAuthenticator) GetSubjectByID(_ context.Context, id auth.SubjectID) (auth.Subject, error) {
 	user, ok := a.entries[string(id)]
 	if !ok || !user.Enabled {
 		return nil, auth.ErrAuthenticationFailed
