@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/distribution-auth/auth/auth"
+	"github.com/sagikazarmark/registry-auth/auth"
 )
 
 func TestParseScope(t *testing.T) {

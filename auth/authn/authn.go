@@ -6,7 +6,7 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/distribution-auth/auth/auth"
+	"github.com/sagikazarmark/registry-auth/auth"
 )
 
 // UserAuthenticator is a static list of users.

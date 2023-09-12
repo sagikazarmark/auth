@@ -1,10 +1,10 @@
-# Distribution auth
+# Registry auth
 
-[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/distribution-auth/auth/ci.yaml?style=flat-square)](https://github.com/distribution-auth/auth/actions/workflows/ci.yaml)
-[![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/mod/github.com/distribution-auth/auth)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/sagikazarmark/registry-auth/ci.yaml?style=flat-square)](https://github.com/sagikazarmark/registry-auth/actions/workflows/ci.yaml)
+[![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/mod/github.com/sagikazarmark/registry-auth)
 [![built with nix](https://img.shields.io/badge/builtwith-nix-7d81f7?style=flat-square)](https://builtwithnix.org)
 
-**Authentication library implementing the [Distribution Registry Auth specification](https://github.com/distribution/distribution/tree/main/docs/spec/auth).**
+**Authentication library implementing the [Docker (Distribution) Registry Auth specification](https://github.com/distribution/distribution/tree/main/docs/spec/auth).**
 
 
 ## Usage

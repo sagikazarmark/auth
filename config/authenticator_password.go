@@ -7,9 +7,9 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/distribution-auth/auth/auth"
-	"github.com/distribution-auth/auth/auth/authn"
-	"github.com/distribution-auth/auth/pkg/slices"
+	"github.com/sagikazarmark/registry-auth/auth"
+	"github.com/sagikazarmark/registry-auth/auth/authn"
+	"github.com/sagikazarmark/registry-auth/pkg/slices"
 )
 
 var (

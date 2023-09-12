@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/distribution-auth/auth/auth"
+	"github.com/sagikazarmark/registry-auth/auth"
 )
 
 func TestUserAuthenticator(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/jonboulle/clockwork"
 
-	"github.com/distribution-auth/auth/auth"
+	"github.com/sagikazarmark/registry-auth/auth"
 )
 
 type accessTokenClaims struct {

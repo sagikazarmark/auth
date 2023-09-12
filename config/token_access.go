@@ -8,8 +8,8 @@ import (
 	"github.com/docker/libtrust"
 	"gopkg.in/yaml.v3"
 
-	"github.com/distribution-auth/auth/auth"
-	"github.com/distribution-auth/auth/auth/token/jwt"
+	"github.com/sagikazarmark/registry-auth/auth"
+	"github.com/sagikazarmark/registry-auth/auth/token/jwt"
 )
 
 var (

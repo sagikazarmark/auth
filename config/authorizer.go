@@ -6,8 +6,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/distribution-auth/auth/auth"
-	"github.com/distribution-auth/auth/auth/authz"
+	"github.com/sagikazarmark/registry-auth/auth"
+	"github.com/sagikazarmark/registry-auth/auth/authz"
 )
 
 var (

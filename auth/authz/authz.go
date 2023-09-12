@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/distribution-auth/auth/auth"
+	"github.com/sagikazarmark/registry-auth/auth"
 )
 
 // DefaultAuthorizer implements a basic set of authorization rules

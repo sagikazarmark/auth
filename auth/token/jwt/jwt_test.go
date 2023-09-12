@@ -3,7 +3,7 @@ package jwt
 import (
 	"maps"
 
-	"github.com/distribution-auth/auth/auth"
+	"github.com/sagikazarmark/registry-auth/auth"
 )
 
 type subjectStub struct {

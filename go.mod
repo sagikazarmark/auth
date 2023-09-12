@@ -1,4 +1,4 @@
-module github.com/distribution-auth/auth
+module github.com/sagikazarmark/registry-auth
 
 go 1.21.0
 

@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/distribution-auth/auth/pkg/slices"
+	"github.com/sagikazarmark/registry-auth/pkg/slices"
 )
 
 // Scopes is a list of Scope instances.
