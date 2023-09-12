@@ -1,7 +1,7 @@
 version: "3.8"
 
 services:
-  registry:
+  distribution:
     image: registry:2
     ports:
       - 127.0.0.1:5000:5000
@@ -14,3 +14,11 @@ services:
     volumes:
       - ./var/lib/registry:/var/lib/registry
       - ./etc/docker/registry:/etc/docker/registry
+
+  zot:
+    image: ghcr.io/project-zot/zot-linux-arm64:v1.4.3
+    ports:
+      - 127.0.0.1:5001:5001
+    volumes:
+      - ./var/zot:/tmp/zot
+      - ./etc/zot:/etc/zot

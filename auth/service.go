@@ -44,7 +44,7 @@ func (r TokenRequest) Validate() error {
 	}
 
 	if r.ClientID == "" {
-		return errors.New("client ID is required")
+		// return errors.New("client ID is required")
 	}
 
 	return nil
