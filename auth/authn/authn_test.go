@@ -100,7 +100,7 @@ type refreshTokenVerifier struct {
 	refreshTokens map[string]auth.SubjectID
 }
 
-func (v refreshTokenVerifier) VerifyRefreshToken(_ context.Context, service string, refreshToken string) (auth.SubjectID, error) {
+func (v refreshTokenVerifier) VerifyRefreshToken(_ context.Context, _ string, refreshToken string) (auth.SubjectID, error) {
 	return v.refreshTokens[refreshToken], nil
 }
 

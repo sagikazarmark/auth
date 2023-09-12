@@ -1,8 +1,9 @@
 package jwt
 
 import (
+	"maps"
+
 	"github.com/distribution-auth/auth/auth"
-	"golang.org/x/exp/maps"
 )
 
 type subjectStub struct {

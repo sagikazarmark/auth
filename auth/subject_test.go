@@ -1,10 +1,10 @@
 package auth
 
 import (
+	"maps"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/exp/maps"
 )
 
 type subjectStub struct {

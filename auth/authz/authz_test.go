@@ -2,11 +2,11 @@ package authz
 
 import (
 	"context"
+	"maps"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/exp/maps"
 
 	"github.com/distribution-auth/auth/auth"
 )
@@ -38,7 +38,7 @@ type repositoryAuthorizerStub struct {
 	repositories map[string]bool
 }
 
-func (a repositoryAuthorizerStub) Authorize(_ context.Context, name string, subject auth.Subject, actions []string) ([]string, error) {
+func (a repositoryAuthorizerStub) Authorize(_ context.Context, name string, _ auth.Subject, actions []string) ([]string, error) {
 	if !a.repositories[name] {
 		return []string{}, nil
 	}

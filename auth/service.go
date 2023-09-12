@@ -3,10 +3,9 @@ package auth
 import (
 	"context"
 	"errors"
+	"log/slog"
+	"slices"
 	"time"
-
-	"go.uber.org/zap"
-	"golang.org/x/exp/slices"
 )
 
 // TokenService implements both the [Docker Registry v2 authentication] and the [Docker Registry v2 OAuth2 authentication] specification.
@@ -280,7 +279,7 @@ func (s TokenServiceImpl) OAuth2Handler(ctx context.Context, r OAuth2Request) (O
 // LoggerTokenService acts as a middleware for a TokenService and logs every request.
 type LoggerTokenService struct {
 	Service TokenService
-	Logger  *zap.Logger
+	Logger  *slog.Logger
 }
 
 // TokenHandler implements TokenService and logs every request.
@@ -289,17 +288,17 @@ func (s LoggerTokenService) TokenHandler(ctx context.Context, r TokenRequest) (T
 
 	logger := s.Logger.With(
 		// TODO: correlation ID
-		zap.String("client_id", r.ClientID),
-		zap.String("service", r.Service),
-		zap.String("scopes", r.Scopes.String()),
-		zap.Bool("offline", r.Offline),
-		zap.Bool("anonymous", r.Anonymous),
+		slog.String("client_id", r.ClientID),
+		slog.String("service", r.Service),
+		slog.String("scopes", r.Scopes.String()),
+		slog.Bool("offline", r.Offline),
+		slog.Bool("anonymous", r.Anonymous),
 	)
 
 	if err != nil && !(errors.Is(err, ErrUnauthorized) || errors.Is(err, ErrAuthenticationFailed)) {
-		logger.Error("authorization failed", zap.Error(err))
+		logger.Error("authorization failed", slog.Any("error", err))
 	} else if err != nil {
-		logger.Info("authorization failed due to client error", zap.Error(err))
+		logger.Info("authorization failed due to client error", slog.Any("error", err))
 	} else {
 		logger.Info("client authorized")
 	}
@@ -313,17 +312,17 @@ func (s LoggerTokenService) OAuth2Handler(ctx context.Context, r OAuth2Request) 
 
 	logger := s.Logger.With(
 		// TODO: correlation ID
-		zap.String("client_id", r.ClientID),
-		zap.String("service", r.Service),
-		zap.String("scopes", r.Scopes.String()),
-		zap.Bool("offline", r.AccessType == AccessTypeOffline),
-		zap.String("grant_type", r.GrantType),
+		slog.String("client_id", r.ClientID),
+		slog.String("service", r.Service),
+		slog.String("scopes", r.Scopes.String()),
+		slog.Bool("offline", r.AccessType == AccessTypeOffline),
+		slog.String("grant_type", r.GrantType),
 	)
 
 	if err != nil && !(errors.Is(err, ErrUnauthorized) || errors.Is(err, ErrAuthenticationFailed)) {
-		logger.Error("authorization failed", zap.Error(err))
+		logger.Error("authorization failed", slog.Any("error", err))
 	} else if err != nil {
-		logger.Info("authorization failed due to client error", zap.Error(err))
+		logger.Info("authorization failed due to client error", slog.Any("error", err))
 	} else {
 		logger.Info("client authorized")
 	}

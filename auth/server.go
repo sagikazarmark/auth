@@ -3,10 +3,10 @@ package auth
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/gorilla/schema"
-	"go.uber.org/zap"
 )
 
 // Set a Decoder instance as a package global, because it caches
@@ -22,7 +22,7 @@ func init() {
 // [Docker Registry v2 authentication]: https://github.com/distribution/distribution/blob/main/docs/spec/auth/index.md
 type TokenServer struct {
 	Service TokenService
-	Logger  *zap.Logger
+	Logger  *slog.Logger
 }
 
 func handleError(err error, w http.ResponseWriter) {
@@ -41,7 +41,7 @@ func handleError(err error, w http.ResponseWriter) {
 func (s TokenServer) TokenHandler(w http.ResponseWriter, r *http.Request) {
 	request, err := decodeTokenRequest(r)
 	if err != nil {
-		s.Logger.Error("failed to decode request", zap.Error(err))
+		s.Logger.Error("failed to decode request", slog.Any("error", err))
 		handleError(err, w)
 		return
 	}
@@ -53,7 +53,7 @@ func (s TokenServer) TokenHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 // TODO: error handling 400
@@ -98,7 +98,7 @@ type rawTokenRequest struct {
 func (s TokenServer) OAuth2Handler(w http.ResponseWriter, r *http.Request) {
 	request, err := decodeOAuth2Request(r)
 	if err != nil {
-		s.Logger.Error("failed to decode request", zap.Error(err))
+		s.Logger.Error("failed to decode request", slog.Any("error", err))
 		handleError(err, w)
 		return
 	}
@@ -110,7 +110,7 @@ func (s TokenServer) OAuth2Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 // TODO: error handling 400
