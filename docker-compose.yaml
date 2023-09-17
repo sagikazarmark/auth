@@ -15,5 +15,5 @@ services:
     ports:
       - 127.0.0.1:5001:5001
     volumes:
-      - ./var/zot:/tmp/zot
+      - ./var/zot:/var/lib/registry
       - ./etc/zot:/etc/zot
