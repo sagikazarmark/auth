@@ -19,7 +19,9 @@ RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /usr/local/bin/r
 
 FROM alpine:3.18.3@sha256:7144f7bab3d4c2648d7e59409f15ec52a18006a128c733fcff20d3a4a54ba44a AS alpine
 
-RUN apk add --update --no-cache ca-certificates tzdata
+RUN apk add --update --no-cache ca-certificates tzdata bash
+
+SHELL ["/bin/bash", "-c"]
 
 COPY --from=builder /usr/local/bin/registry-auth /usr/local/bin/
 
