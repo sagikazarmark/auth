@@ -26,6 +26,7 @@
 
             packages = with pkgs; [
               just
+              skopeo
             ] ++ [
               self'.packages.golangci-lint
             ];

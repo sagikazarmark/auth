@@ -1,22 +1,17 @@
 version: "3.8"
 
 services:
-  distribution:
-    image: registry:2
+  docker:
+    image: registry:2.8.2
     ports:
       - 127.0.0.1:5000:5000
-        #environment:
-      #REGISTRY_HTTP_TLS_CERTIFICATE: /etc/registry/certs/domain.crt
-      #REGISTRY_HTTP_TLS_KEY: /etc/registry/certs/domain.key
-      # REGISTRY_AUTH: htpasswd
-      # REGISTRY_AUTH_HTPASSWD_PATH: /etc/registry/auth/htpasswd
-      # REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
     volumes:
-      - ./var/lib/registry:/var/lib/registry
-      - ./etc/docker/registry:/etc/docker/registry
+      - ./var/docker:/var/lib/registry
+      - ./etc/docker:/etc/docker/registry
 
   zot:
-    image: ghcr.io/project-zot/zot-linux-arm64:v1.4.3
+    # image: ghcr.io/project-zot/zot-linux-arm64:v2.0.0-rc6
+    image: ghcr.io/sagikazarmark/zot:auth-fix
     ports:
       - 127.0.0.1:5001:5001
     volumes:
