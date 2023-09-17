@@ -21,7 +21,7 @@
           default = {
             languages = {
               go.enable = true;
-              go.package = pkgs.go_1_21;
+              go.package = pkgs.lib.mkDefault pkgs.go_1_21;
             };
 
             packages = with pkgs; [
@@ -36,6 +36,14 @@
           };
 
           ci = devenv.shells.default;
+
+          ci_1_21 = {
+            imports = [ devenv.shells.ci ];
+
+            languages = {
+              go.package = pkgs.go_1_21;
+            };
+          };
         };
 
         packages = {

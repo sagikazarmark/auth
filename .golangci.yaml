@@ -6,9 +6,9 @@ linters-settings:
     sections:
       - standard
       - default
-      - prefix(github.com/distribution-auth/auth)
+      - prefix(github.com/sagikazarmark/registry-auth)
   goimports:
-    local-prefixes: github.com/distribution-auth/auth
+    local-prefixes: github.com/sagikazarmark/registry-auth
   misspell:
     locale: US
   nolintlint:
