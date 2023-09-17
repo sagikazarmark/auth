@@ -18,7 +18,7 @@ http:
 
 auth:
   token:
-    realm: http://localhost:8080/token
+    realm: http://127.0.0.1:8080/token
     service: localhost:5000
     issuer: localhost:8080
     rootcertbundle: /etc/docker/registry/root.crt

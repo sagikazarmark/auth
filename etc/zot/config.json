@@ -8,7 +8,7 @@
         "port": "5001",
         "auth": {
             "bearer": {
-                "realm": "http://localhost:8080/token",
+                "realm": "http://127.0.0.1:8080/token",
                 "service": "localhost:5001",
                 "cert": "/etc/zot/root.crt"
             }
