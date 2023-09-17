@@ -43,8 +43,8 @@ func (r TokenRequest) Validate() error {
 		return errors.New("service is required")
 	}
 
-	if r.ClientID == "" {
-		return errors.New("client ID is required")
+	if r.ClientID == "" { //nolint
+		// return errors.New("client ID is required")
 	}
 
 	return nil

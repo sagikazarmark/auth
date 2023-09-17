@@ -1,0 +1,11 @@
+version: "3.9"
+
+services:
+  registry-auth:
+    build: .
+    command: [registry-auth, -addr, 0.0.0.0:8080, -debug, -realm, localhost:8080, -config, /etc/registry-auth/config.yaml]
+    ports:
+      - 127.0.0.1:8080:8080
+    volumes:
+      - ./config.yaml:/etc/registry-auth/config.yaml
+      - ./private_key.pem:/private_key.pem

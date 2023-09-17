@@ -115,14 +115,14 @@ func (s TokenServer) OAuth2Handler(w http.ResponseWriter, r *http.Request) {
 
 // TODO: error handling 400
 func decodeOAuth2Request(r *http.Request) (OAuth2Request, error) {
-	err := r.ParseMultipartForm(32 << 20)
+	err := r.ParseForm()
 	if err != nil {
 		return OAuth2Request{}, err
 	}
 
 	var rawRequest rawOAuth2Request
 
-	err = decoder.Decode(&rawRequest, r.URL.Query())
+	err = decoder.Decode(&rawRequest, r.PostForm)
 	if err != nil {
 		return OAuth2Request{}, err
 	}

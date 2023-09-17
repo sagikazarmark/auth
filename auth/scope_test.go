@@ -59,6 +59,17 @@ func TestParseScope(t *testing.T) {
 					Actions: []string{"pull", "push", "pull"},
 				},
 			},
+			{
+				"repository::pull",
+				auth.Scope{
+					Resource: auth.Resource{
+						Type:  "repository",
+						Class: "",
+						Name:  "",
+					},
+					Actions: []string{"pull"},
+				},
+			},
 		}
 
 		for _, testCase := range testCases {

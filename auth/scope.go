@@ -19,7 +19,7 @@ func (s Scopes) String() string {
 // Scope describes an access request to a specific resource.
 type Scope struct {
 	Resource
-	Actions []string
+	Actions []string `json:"actions"`
 }
 
 func (s Scope) String() string {
@@ -28,9 +28,9 @@ func (s Scope) String() string {
 
 // Resource describes a resource by type and name.
 type Resource struct {
-	Type  string
-	Class string
-	Name  string
+	Type  string `json:"type"`
+	Class string `json:"class"`
+	Name  string `json:"name"`
 }
 
 func (r Resource) String() string {
@@ -39,7 +39,6 @@ func (r Resource) String() string {
 	}
 
 	return fmt.Sprintf("%s:%s", r.Type, r.Name)
-
 }
 
 // ParseScopes calls ParseScope for each scope in the list.
