@@ -57,11 +57,15 @@ jobs:
       - name: Prepare Nix shell
         run: nix develop --impure .#ci
 
+      # Run this first to avoid permission issues with Docker
+      - name: Download Alpine image
+        run: nix develop --impure .#ci -c just download-alpine
+
       - name: Launch Docker Compose
         run: docker compose -f docker-compose.yaml -f docker-compose.ci.yaml up -d
 
       - name: Test
-        run: nix develop --impure .#ci -c just login download-alpine test-push
+        run: nix develop --impure .#ci -c just login test-push
 
       - name: Cleanup Docker Compose
         run: docker compose -f docker-compose.yaml -f docker-compose.ci.yaml down -v
