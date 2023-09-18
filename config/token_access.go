@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/docker/libtrust"
@@ -12,32 +11,23 @@ import (
 	"github.com/sagikazarmark/registry-auth/auth/token/jwt"
 )
 
-var (
-	accessTokenIssuerFactoriesMu sync.RWMutex
-	accessTokenIssuerFactories   = make(map[string]AccessTokenIssuerFactory)
-)
+// AccessTokenIssuerFactory creates a new [auth.AccessTokenIssuer].
+type AccessTokenIssuerFactory = Factory[auth.AccessTokenIssuer]
 
-// RegisterAccessTokenIssuerFactory makes an AuthenticatorFactory available by the provided name in configuration.
+var accessTokenIssuerFactoryRegistry = &factoryRegistry[auth.AccessTokenIssuer]{}
+
+// RegisterAccessTokenIssuerFactory makes a [AccessTokenIssuerFactory] available by the provided name in configuration.
 //
-// If RegisterAccessTokenIssuerFactory is called twice with the same name or if factory is nil,
-// it panics.
-func RegisterAccessTokenIssuerFactory(name string, factory AccessTokenIssuerFactory) {
-	accessTokenIssuerFactoriesMu.Lock()
-	defer accessTokenIssuerFactoriesMu.Unlock()
-
-	if factory == nil {
-		panic("registering access token issuer factory: factory is nil")
+// If RegisterAccessTokenIssuerFactory is called twice with the same name or if factory is nil, it panics.
+func RegisterAccessTokenIssuerFactory(name string, factory func() AccessTokenIssuerFactory) {
+	err := accessTokenIssuerFactoryRegistry.RegisterFactory(name, factory)
+	if err != nil {
+		panic("registering access token issuer factory: " + err.Error())
 	}
-
-	if _, dup := accessTokenIssuerFactories[name]; dup {
-		panic("registering access token issuer factory: registration called twice for factory " + name)
-	}
-
-	accessTokenIssuerFactories[name] = factory
 }
 
 func init() {
-	RegisterAccessTokenIssuerFactory("jwt", jwtAccessTokenIssuer{})
+	RegisterAccessTokenIssuerFactory("jwt", func() AccessTokenIssuerFactory { return jwtAccessTokenIssuer{} })
 }
 
 // AccessTokenIssuer is the configuration for an auth.AccessTokenIssuer.
@@ -53,12 +43,14 @@ func (c *AccessTokenIssuer) UnmarshalYAML(value *yaml.Node) error {
 		return err
 	}
 
-	accessTokenIssuerFactoriesMu.RLock()
-	factory, ok := accessTokenIssuerFactories[rawConfig.Type]
-	accessTokenIssuerFactoriesMu.RUnlock()
-
+	factory, ok := accessTokenIssuerFactoryRegistry.GetFactory(rawConfig.Type)
 	if !ok {
-		return fmt.Errorf("unknown access token issuer type: %s", rawConfig.Type)
+		c.AccessTokenIssuerFactory = unknownFactoryType[auth.AccessTokenIssuer]{
+			factoryType: "access token issuer",
+			typ:         rawConfig.Type,
+		}
+
+		return nil
 	}
 
 	err = decode(rawConfig.Config, &factory)
@@ -71,24 +63,13 @@ func (c *AccessTokenIssuer) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-// AccessTokenIssuerFactory creates a new auth.AccessTokenIssuer.
-type AccessTokenIssuerFactory interface {
-	New() AccessTokenIssuerFactory
-	CreateAccessTokenIssuer() (auth.AccessTokenIssuer, error)
-	Validate() error
-}
-
 type jwtAccessTokenIssuer struct {
 	Issuer         string        `mapstructure:"issuer"`
 	PrivateKeyFile string        `mapstructure:"privateKeyFile"`
 	Expiration     time.Duration `mapstructure:"expiration"`
 }
 
-func (c jwtAccessTokenIssuer) New() AccessTokenIssuerFactory {
-	return jwtAccessTokenIssuer{}
-}
-
-func (c jwtAccessTokenIssuer) CreateAccessTokenIssuer() (auth.AccessTokenIssuer, error) {
+func (c jwtAccessTokenIssuer) New() (auth.AccessTokenIssuer, error) {
 	signingKey, err := libtrust.LoadKeyFile(c.PrivateKeyFile)
 	if err != nil {
 		return nil, err
@@ -99,15 +80,15 @@ func (c jwtAccessTokenIssuer) CreateAccessTokenIssuer() (auth.AccessTokenIssuer,
 
 func (c jwtAccessTokenIssuer) Validate() error {
 	if c.Issuer == "" {
-		return fmt.Errorf("access token issuer: jwt: issuer is required")
+		return fmt.Errorf("jwt: issuer is required")
 	}
 
 	if c.PrivateKeyFile == "" {
-		return fmt.Errorf("access token issuer: jwt: privateKeyFile is required")
+		return fmt.Errorf("jwt: privateKeyFile is required")
 	}
 
 	if c.Expiration == 0 {
-		return fmt.Errorf("access token issuer: jwt: expiration is required")
+		return fmt.Errorf("jwt: expiration is required")
 	}
 
 	return nil
