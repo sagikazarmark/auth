@@ -6,12 +6,16 @@
 
 **Authentication library implementing the [Docker (Distribution) Registry Auth specification](https://github.com/distribution/distribution/tree/main/docs/spec/auth).**
 
+> [!WARNING]
+> **Project is under development. Backwards compatibility is not guaranteed.**
 
-## Usage
+## Development
+
+**For an optimal developer experience, it is recommended to install [Nix](https://nixos.org/download.html) and [direnv](https://direnv.net/docs/installation.html).**
 
 1. `docker compose up -d`
-1. `go run ./cmd/server -addr 0.0.0.0:8080 -debug -realm localhost:8080`
-1. `docker login -u user -p password localhost:5000`
+1. `just run`
+1. `just login`
 
 
 ## License
