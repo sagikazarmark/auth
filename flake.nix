@@ -29,6 +29,7 @@
               skopeo
             ] ++ [
               self'.packages.golangci-lint
+              self'.packages.service-locator-gen
             ];
 
             # https://github.com/cachix/devenv/issues/528#issuecomment-1556108767
@@ -47,6 +48,25 @@
         };
 
         packages = {
+          # TODO: binary name
+          service-locator-gen = pkgs.buildGoModule rec {
+            pname = "service-locator-gen";
+            name = "service-locator-gen";
+            # version = "0.8.0";
+
+            src = pkgs.fetchFromGitHub {
+              owner = "sagikazarmark";
+              repo = "go-service-locator";
+              # rev = "v${version}";
+              rev = "f6a1274c757172035c57be4dd078cd2cc7ec190c";
+              sha256 = "sha256-mmlHm1zJRSpjotoy1vSG/c56fTH5WYYUjM1NKPnk99c=";
+            };
+
+            vendorSha256 = "sha256-/+VGWI73NEyZgKSxe6MP4alO/J58eTwl8HrTLzGFueo=";
+
+            subPackages = [ "." ];
+          };
+
           golangci-lint = pkgs.buildGo121Module rec {
             pname = "golangci-lint";
             version = "1.54.2";
