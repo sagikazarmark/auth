@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"maps"
-	"sync"
 
 	"gopkg.in/yaml.v3"
 
@@ -12,35 +11,26 @@ import (
 	"github.com/sagikazarmark/registry-auth/pkg/slices"
 )
 
-var (
-	passwordAuthenticatorFactoriesMu sync.RWMutex
-	passwordAuthenticatorFactories   = make(map[string]PasswordAuthenticatorFactory)
-)
+// PasswordAuthenticatorFactory creates a new [auth.PasswordAuthenticator].
+type PasswordAuthenticatorFactory = Factory[auth.PasswordAuthenticator]
 
-// RegisterPasswordAuthenticatorFactory makes an AuthenticatorFactory available by the provided name in configuration.
+var passwordAuthenticatorFactoryRegistry = &factoryRegistry[auth.PasswordAuthenticator]{}
+
+// RegisterPasswordAuthenticatorFactory makes a [PasswordAuthenticatorFactory] available by the provided name in configuration.
 //
-// If RegisterPasswordAuthenticatorFactory is called twice with the same name or if factory is nil,
-// it panics.
-func RegisterPasswordAuthenticatorFactory(name string, factory PasswordAuthenticatorFactory) {
-	passwordAuthenticatorFactoriesMu.Lock()
-	defer passwordAuthenticatorFactoriesMu.Unlock()
-
-	if factory == nil {
-		panic("registering password authenticator factory: factory is nil")
+// If RegisterPasswordAuthenticatorFactory is called twice with the same name or if factory is nil, it panics.
+func RegisterPasswordAuthenticatorFactory(name string, factory func() PasswordAuthenticatorFactory) {
+	err := passwordAuthenticatorFactoryRegistry.RegisterFactory(name, factory)
+	if err != nil {
+		panic("registering password authenticator factory: " + err.Error())
 	}
-
-	if _, dup := passwordAuthenticatorFactories[name]; dup {
-		panic("registering password authenticator factory: registration called twice for factory " + name)
-	}
-
-	passwordAuthenticatorFactories[name] = factory
 }
 
 func init() {
-	RegisterPasswordAuthenticatorFactory("user", userAuthenticator{})
+	RegisterPasswordAuthenticatorFactory("user", func() PasswordAuthenticatorFactory { return userAuthenticator{} })
 }
 
-// PasswordAuthenticator is the configuration for an auth.PasswordAuthenticator.
+// PasswordAuthenticator is the configuration for an [auth.PasswordAuthenticator].
 type PasswordAuthenticator struct {
 	PasswordAuthenticatorFactory
 }
@@ -53,12 +43,14 @@ func (c *PasswordAuthenticator) UnmarshalYAML(value *yaml.Node) error {
 		return err
 	}
 
-	passwordAuthenticatorFactoriesMu.RLock()
-	factory, ok := passwordAuthenticatorFactories[rawConfig.Type]
-	passwordAuthenticatorFactoriesMu.RUnlock()
-
+	factory, ok := passwordAuthenticatorFactoryRegistry.GetFactory(rawConfig.Type)
 	if !ok {
-		return fmt.Errorf("unknown password authenticator type: %s", rawConfig.Type)
+		c.PasswordAuthenticatorFactory = unknownFactoryType[auth.PasswordAuthenticator]{
+			factoryType: "password authenticator",
+			typ:         rawConfig.Type,
+		}
+
+		return nil
 	}
 
 	err = decode(rawConfig.Config, &factory)
@@ -69,13 +61,6 @@ func (c *PasswordAuthenticator) UnmarshalYAML(value *yaml.Node) error {
 	c.PasswordAuthenticatorFactory = factory
 
 	return nil
-}
-
-// PasswordAuthenticatorFactory creates a new auth.PasswordAuthenticator.
-type PasswordAuthenticatorFactory interface {
-	New() PasswordAuthenticatorFactory
-	CreatePasswordAuthenticator() (auth.PasswordAuthenticator, error)
-	Validate() error
 }
 
 type userAuthenticator struct {
@@ -89,11 +74,7 @@ type user struct {
 	Attrs        map[string]string `mapstructure:"attributes"`
 }
 
-func (c userAuthenticator) New() PasswordAuthenticatorFactory {
-	return userAuthenticator{}
-}
-
-func (c userAuthenticator) CreatePasswordAuthenticator() (auth.PasswordAuthenticator, error) {
+func (c userAuthenticator) New() (auth.PasswordAuthenticator, error) {
 	entries := slices.Map(c.Entries, func(v user) authn.User {
 		return authn.User{
 			Enabled:      v.Enabled,
@@ -109,11 +90,11 @@ func (c userAuthenticator) CreatePasswordAuthenticator() (auth.PasswordAuthentic
 func (c userAuthenticator) Validate() error {
 	for i, entry := range c.Entries {
 		if entry.Username == "" {
-			return fmt.Errorf("password authenticator: user authenticator: entry[%d]: username is required", i)
+			return fmt.Errorf("user authenticator: entry[%d]: username is required", i)
 		}
 
 		if entry.PasswordHash == "" {
-			return fmt.Errorf("password authenticator: user authenticator: entry[%d]: password hash is required", i)
+			return fmt.Errorf("user authenticator: entry[%d]: password hash is required", i)
 		}
 	}
 

@@ -79,41 +79,55 @@ func main() {
 		os.Exit(1)
 	}
 
-	passwordAuthenticator, err := config.PasswordAuthenticator.CreatePasswordAuthenticator()
+	passwordAuthenticator, err := config.PasswordAuthenticator.New()
 	if err != nil {
 		logger.Error(fmt.Sprintf("creating authenticator: %v", err))
 
 		os.Exit(1)
 	}
 
-	accessTokenIssuer, err := config.AccessTokenIssuer.CreateAccessTokenIssuer()
+	accessTokenIssuer, err := config.AccessTokenIssuer.New()
 	if err != nil {
 		logger.Error(fmt.Sprintf("creating access token issuer: %v", err))
 
 		os.Exit(1)
 	}
 
-	refreshTokenIssuer, err := config.RefreshTokenIssuer.CreateRefreshTokenIssuer()
+	refreshTokenIssuer, err := config.RefreshTokenIssuer.New()
 	if err != nil {
 		logger.Error(fmt.Sprintf("creating refresh token issuer: %v", err))
 
 		os.Exit(1)
 	}
 
+	refreshTokenVerifier, ok := refreshTokenIssuer.(authn.RefreshTokenVerifier)
+	if !ok {
+		logger.Error("refresh token issuer cannot verify refresh tokens")
+
+		os.Exit(1)
+	}
+
+	subjectRepository, ok := passwordAuthenticator.(authn.SubjectRepository)
+	if !ok {
+		logger.Error("password authenticator should also serve as a subject repository")
+
+		os.Exit(1)
+	}
+
+	// TODO: configuration
+	refreshTokenAuthenticator := authn.NewRefreshTokenAuthenticator(refreshTokenVerifier, subjectRepository)
+
 	tokenIssuer := auth.TokenIssuer{
 		AccessTokenIssuer:  accessTokenIssuer,
 		RefreshTokenIssuer: refreshTokenIssuer,
 	}
-
-	// TODO: configuration
-	refreshTokenAuthenticator := authn.NewRefreshTokenAuthenticator(refreshTokenIssuer.(authn.RefreshTokenVerifier), passwordAuthenticator.(authn.SubjectRepository))
 
 	authenticator := auth.Authenticator{
 		PasswordAuthenticator:     passwordAuthenticator,
 		RefreshTokenAuthenticator: refreshTokenAuthenticator,
 	}
 
-	authorizer, err := config.Authorizer.CreateAuthorizer()
+	authorizer, err := config.Authorizer.New()
 	if err != nil {
 		logger.Error(fmt.Sprintf("creating authorizer issuer: %v", err))
 
@@ -125,8 +139,7 @@ func main() {
 	service = auth.TokenServiceImpl{
 		Authenticator: authenticator,
 		Authorizer:    authorizer,
-		// Authorizer:    authz.NewDefaultAuthorizer(authz.NewDefaultRepositoryAuthorizer(false), false),
-		TokenIssuer: tokenIssuer,
+		TokenIssuer:   tokenIssuer,
 	}
 	service = auth.LoggerTokenService{
 		Service: service,

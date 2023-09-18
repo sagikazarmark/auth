@@ -1,6 +1,13 @@
 default:
     just --list
 
+build:
+    mkdir -p build
+    go build -o build/registry-auth-server ./cmd/server/
+
+run:
+    go run ./cmd/server -addr 0.0.0.0:8080 -debug -realm localhost:8080
+
 test:
     go test -race -v ./...
 

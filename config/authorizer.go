@@ -1,41 +1,29 @@
 package config
 
 import (
-	"fmt"
-	"sync"
-
 	"gopkg.in/yaml.v3"
 
 	"github.com/sagikazarmark/registry-auth/auth"
 	"github.com/sagikazarmark/registry-auth/auth/authz"
 )
 
-var (
-	authorizerFactoriesMu sync.RWMutex
-	authorizerFactories   = make(map[string]AuthorizerFactory)
-)
+// AuthorizerFactory creates a new [auth.Authorizer].
+type AuthorizerFactory = Factory[auth.Authorizer]
 
-// RegisterAuthorizerFactory makes an AuthenticatorFactory available by the provided name in configuration.
+var authorizerFactoryRegistry = &factoryRegistry[auth.Authorizer]{}
+
+// RegisterAuthorizerFactory makes a [AuthorizerFactory] available by the provided name in configuration.
 //
-// If RegisterAuthorizerFactory is called twice with the same name or if factory is nil,
-// it panics.
-func RegisterAuthorizerFactory(name string, factory AuthorizerFactory) {
-	authorizerFactoriesMu.Lock()
-	defer authorizerFactoriesMu.Unlock()
-
-	if factory == nil {
-		panic("registering authorizer factory: factory is nil")
+// If RegisterAuthorizerFactory is called twice with the same name or if factory is nil, it panics.
+func RegisterAuthorizerFactory(name string, factory func() AuthorizerFactory) {
+	err := authorizerFactoryRegistry.RegisterFactory(name, factory)
+	if err != nil {
+		panic("registering authorizer factory: " + err.Error())
 	}
-
-	if _, dup := authorizerFactories[name]; dup {
-		panic("registering authorizer factory: registration called twice for factory " + name)
-	}
-
-	authorizerFactories[name] = factory
 }
 
 func init() {
-	RegisterAuthorizerFactory("default", defaultAuthorizer{})
+	RegisterAuthorizerFactory("default", func() AuthorizerFactory { return defaultAuthorizer{} })
 }
 
 // Authorizer is the configuration for an auth.Authorizer.
@@ -51,12 +39,14 @@ func (c *Authorizer) UnmarshalYAML(value *yaml.Node) error {
 		return err
 	}
 
-	authorizerFactoriesMu.RLock()
-	factory, ok := authorizerFactories[rawConfig.Type]
-	authorizerFactoriesMu.RUnlock()
-
+	factory, ok := authorizerFactoryRegistry.GetFactory(rawConfig.Type)
 	if !ok {
-		return fmt.Errorf("unknown authorizer type: %s", rawConfig.Type)
+		c.AuthorizerFactory = unknownFactoryType[auth.Authorizer]{
+			factoryType: "authorizer",
+			typ:         rawConfig.Type,
+		}
+
+		return nil
 	}
 
 	err = decode(rawConfig.Config, &factory)
@@ -69,22 +59,11 @@ func (c *Authorizer) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-// AuthorizerFactory creates a new auth.Authorizer.
-type AuthorizerFactory interface {
-	New() AuthorizerFactory
-	CreateAuthorizer() (auth.Authorizer, error)
-	Validate() error
-}
-
 type defaultAuthorizer struct {
 	AllowAnonymous bool `mapstructure:"allowAnonymous"`
 }
 
-func (c defaultAuthorizer) New() AuthorizerFactory {
-	return defaultAuthorizer{}
-}
-
-func (c defaultAuthorizer) CreateAuthorizer() (auth.Authorizer, error) {
+func (c defaultAuthorizer) New() (auth.Authorizer, error) {
 	return authz.NewDefaultAuthorizer(authz.NewDefaultRepositoryAuthorizer(c.AllowAnonymous), c.AllowAnonymous), nil
 }
 

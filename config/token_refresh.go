@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/docker/libtrust"
 	"gopkg.in/yaml.v3"
@@ -11,32 +10,23 @@ import (
 	"github.com/sagikazarmark/registry-auth/auth/token/jwt"
 )
 
-var (
-	refreshTokenIssuerFactoriesMu sync.RWMutex
-	refreshTokenIssuerFactories   = make(map[string]RefreshTokenIssuerFactory)
-)
+// RefreshTokenIssuerFactory creates a new [auth.RefreshTokenIssuer].
+type RefreshTokenIssuerFactory = Factory[auth.RefreshTokenIssuer]
 
-// RegisterRefreshTokenIssuerFactory makes an AuthenticatorFactory available by the provided name in configuration.
+var refreshTokenIssuerFactoryRegistry = &factoryRegistry[auth.RefreshTokenIssuer]{}
+
+// RegisterRefreshTokenIssuerFactory makes a [RefreshTokenIssuerFactory] available by the provided name in configuration.
 //
-// If RegisterRefreshTokenIssuerFactory is called twice with the same name or if factory is nil,
-// it panics.
-func RegisterRefreshTokenIssuerFactory(name string, factory RefreshTokenIssuerFactory) {
-	refreshTokenIssuerFactoriesMu.Lock()
-	defer refreshTokenIssuerFactoriesMu.Unlock()
-
-	if factory == nil {
-		panic("registering refresh token issuer factory: factory is nil")
+// If RegisterRefreshTokenIssuerFactory is called twice with the same name or if factory is nil, it panics.
+func RegisterRefreshTokenIssuerFactory(name string, factory func() RefreshTokenIssuerFactory) {
+	err := refreshTokenIssuerFactoryRegistry.RegisterFactory(name, factory)
+	if err != nil {
+		panic("registering refresh token issuer factory: " + err.Error())
 	}
-
-	if _, dup := refreshTokenIssuerFactories[name]; dup {
-		panic("registering refresh token issuer factory: registration called twice for factory " + name)
-	}
-
-	refreshTokenIssuerFactories[name] = factory
 }
 
 func init() {
-	RegisterRefreshTokenIssuerFactory("jwt", jwtRefreshTokenIssuer{})
+	RegisterRefreshTokenIssuerFactory("jwt", func() RefreshTokenIssuerFactory { return jwtRefreshTokenIssuer{} })
 }
 
 // RefreshTokenIssuer is the configuration for an auth.RefreshTokenIssuer.
@@ -52,12 +42,14 @@ func (c *RefreshTokenIssuer) UnmarshalYAML(value *yaml.Node) error {
 		return err
 	}
 
-	refreshTokenIssuerFactoriesMu.RLock()
-	factory, ok := refreshTokenIssuerFactories[rawConfig.Type]
-	refreshTokenIssuerFactoriesMu.RUnlock()
-
+	factory, ok := refreshTokenIssuerFactoryRegistry.GetFactory(rawConfig.Type)
 	if !ok {
-		return fmt.Errorf("unknown refresh token issuer type: %s", rawConfig.Type)
+		c.RefreshTokenIssuerFactory = unknownFactoryType[auth.RefreshTokenIssuer]{
+			factoryType: "refresh token issuer",
+			typ:         rawConfig.Type,
+		}
+
+		return nil
 	}
 
 	err = decode(rawConfig.Config, &factory)
@@ -70,23 +62,12 @@ func (c *RefreshTokenIssuer) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-// RefreshTokenIssuerFactory creates a new auth.RefreshTokenIssuer.
-type RefreshTokenIssuerFactory interface {
-	New() RefreshTokenIssuerFactory
-	CreateRefreshTokenIssuer() (auth.RefreshTokenIssuer, error)
-	Validate() error
-}
-
 type jwtRefreshTokenIssuer struct {
 	Issuer         string `mapstructure:"issuer"`
 	PrivateKeyFile string `mapstructure:"privateKeyFile"`
 }
 
-func (c jwtRefreshTokenIssuer) New() RefreshTokenIssuerFactory {
-	return jwtRefreshTokenIssuer{}
-}
-
-func (c jwtRefreshTokenIssuer) CreateRefreshTokenIssuer() (auth.RefreshTokenIssuer, error) {
+func (c jwtRefreshTokenIssuer) New() (auth.RefreshTokenIssuer, error) {
 	signingKey, err := libtrust.LoadKeyFile(c.PrivateKeyFile)
 	if err != nil {
 		return nil, err
@@ -97,11 +78,11 @@ func (c jwtRefreshTokenIssuer) CreateRefreshTokenIssuer() (auth.RefreshTokenIssu
 
 func (c jwtRefreshTokenIssuer) Validate() error {
 	if c.Issuer == "" {
-		return fmt.Errorf("refresh token issuer: jwt: issuer is required")
+		return fmt.Errorf("jwt: issuer is required")
 	}
 
 	if c.PrivateKeyFile == "" {
-		return fmt.Errorf("refresh token issuer: jwt: privateKeyFile is required")
+		return fmt.Errorf("jwt: privateKeyFile is required")
 	}
 
 	return nil
