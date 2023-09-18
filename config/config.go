@@ -11,8 +11,6 @@ type Config struct {
 }
 
 // Validate validates the configuration.
-//
-// nolint
 func (c Config) Validate() error {
 	if err := c.PasswordAuthenticator.Validate(); err != nil {
 		return fmt.Errorf("password authenticator: %w", err)
