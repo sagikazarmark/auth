@@ -1,3 +1,6 @@
+> # Project moved
+> See [](https://github.com/portward/registry-auth/)
+
 # Registry auth
 
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/sagikazarmark/registry-auth/ci.yaml?style=flat-square)](https://github.com/sagikazarmark/registry-auth/actions/workflows/ci.yaml)
