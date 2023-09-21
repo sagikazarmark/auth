@@ -1,4 +1,4 @@
-> # Project moved
+> # ⚠️ Project moved
 > See [](https://github.com/portward/registry-auth/)
 
 # Registry auth
