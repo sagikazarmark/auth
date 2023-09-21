@@ -1,5 +1,5 @@
 > # ⚠️ Project moved
-> See [](https://github.com/portward/registry-auth/)
+> See [https://github.com/portward/registry-auth](https://github.com/portward/registry-auth/)
 
 # Registry auth
 
